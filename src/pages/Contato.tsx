@@ -22,9 +22,9 @@ export function VisitSection() {
           <span className="text-espresso/55">Terça a sábado</span><span>9h às 16h (início)</span>
           <span className="text-espresso/55">Domingo e segunda</span><span>Fechado</span>
         </div>
-        <div className="mt-10 flex flex-wrap gap-4">
-          <a href={contactLink(c)} target="_blank" rel="noopener noreferrer" className="btn-dark"><Whats /> {hasWhatsapp(c) ? 'Chamar no WhatsApp' : 'Enviar mensagem'}</a>
-          <Link to="/agendar" className="btn-line">Agendar online</Link>
+        <div className="mt-10 grid gap-3 sm:flex sm:flex-wrap sm:gap-4">
+          <a href={contactLink(c)} target="_blank" rel="noopener noreferrer" className="btn-dark w-full sm:w-auto"><Whats /> {hasWhatsapp(c) ? 'Chamar no WhatsApp' : 'Enviar mensagem'}</a>
+          <Link to="/agendar" className="btn-line w-full sm:w-auto">Agendar online</Link>
         </div>
       </div>
       <div className="min-h-[380px] overflow-hidden border border-espresso/10 grayscale-[.6] sepia-[.15] lg:col-span-7">
@@ -42,7 +42,7 @@ export default function Contato() {
       <PageHeader kicker="Contato" title={<>Vamos conversar <em className="text-cacau">sobre o seu cabelo?</em></>}>
         Procedimentos que não estão no agendamento online — mega hair, maquiagem, dia da noiva, corte sem escova e outros — são combinados direto com a Laís.
         <div className="mt-8">
-          <a href={contactLink(settings.contact, 'Olá! Gostaria de saber sobre um procedimento que não encontrei no site.')} target="_blank" rel="noopener noreferrer" className="btn-dark"><Whats /> Falar sobre outros procedimentos</a>
+          <a href={contactLink(settings.contact, 'Olá! Gostaria de saber sobre um procedimento que não encontrei no site.')} target="_blank" rel="noopener noreferrer" className="btn-dark"><Whats /> Falar com a Laís</a>
         </div>
       </PageHeader>
       <VisitSection />

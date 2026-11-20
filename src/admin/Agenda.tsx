@@ -109,6 +109,7 @@ export default function Agenda() {
       {/* Lista do dia no celular */}
       {view === 'dia' && (
         <ul className="mt-6 divide-y divide-espresso/10 border-y border-espresso/10 md:hidden">
+          {byDay(format(cursor, 'yyyy-MM-dd')).length === 0 && <li className="py-6 text-sm text-espresso/55">Nenhum atendimento neste dia.</li>}
           {byDay(format(cursor, 'yyyy-MM-dd')).map((a) => (
             <li key={a.id}><button onClick={() => setEditing(a)} className="flex w-full items-center gap-4 py-4 text-left">
               <span className="w-14 font-display text-2xl">{timeSP(a.starts_at)}</span>

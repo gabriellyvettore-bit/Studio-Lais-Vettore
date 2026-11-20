@@ -77,7 +77,7 @@ export function HistoryForm({ clientId, entry, fromAppointment, onSaved, onCance
           {photos.map((p) => (
             <div key={p} className="relative h-24 w-24">
               <SignedImg path={p} alt="Foto do procedimento" className="h-24 w-24" />
-              <button type="button" onClick={() => setPhotos(photos.filter((x) => x !== p))} className="absolute -right-2 -top-2 rounded-full bg-espresso p-1 text-marfim" aria-label="Remover foto"><Close width={12} height={12} /></button>
+              <button type="button" onClick={() => setPhotos(photos.filter((x) => x !== p))} className="absolute -right-2 -top-2 rounded-full bg-espresso p-2 text-marfim" aria-label="Remover foto"><Close width={14} height={14} /></button>
             </div>
           ))}
           <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center border border-dashed border-espresso/30 text-xs text-espresso/55 hover:border-espresso">

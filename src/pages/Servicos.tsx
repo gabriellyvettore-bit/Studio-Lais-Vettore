@@ -8,8 +8,8 @@ import { contactLink } from '../lib/whatsapp'
 import type { Service, ServicePrice } from '../lib/types'
 
 function PriceCell({ p }: { p: ServicePrice | undefined }) {
-  if (!p || p.unavailable) return <span className="text-sm text-espresso/45">Consultar</span>
-  if (p.price == null) return <span className="text-sm text-espresso/45">No salão</span>
+  if (!p || p.unavailable) return <span className="text-sm italic text-cacau">A combinar</span>
+  if (p.price == null) return <span className="text-sm italic text-cacau">A combinar</span>
   const promo = promoActive(p)
   return (
     <span className="whitespace-nowrap">
@@ -24,7 +24,7 @@ function Rules({ s }: { s: Service }) {
     ? null : s.allowed_weekdays.map((d) => WEEKDAYS_SHORT[d]).join(', ')
   const win = s.start_window_from && s.start_window_to ? `início das ${s.start_window_from.slice(0, 5)} às ${s.start_window_to.slice(0, 5)}` : null
   const parts = [durationLabel(s.duration_min), days && `somente ${days}`, win].filter(Boolean)
-  return <p className="mt-2 text-[0.72rem] uppercase tracking-[0.14em] text-espresso/50">{parts.join(' · ')}</p>
+  return <p className="mt-2 text-[0.72rem] uppercase tracking-[0.14em] text-espresso/65">{parts.join(' · ')}</p>
 }
 
 export default function Servicos() {

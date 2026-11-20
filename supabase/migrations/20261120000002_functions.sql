@@ -258,12 +258,6 @@ begin
    where user_id = v_uid and lgpd_consent_at is not null;
   if v_client is null then raise exception 'profile_required' using errcode = '22023'; end if;
 
-  if (select count(*) from public.appointments a
-       where a.client_id = v_client and a.status = 'pendente' and a.starts_at > now())
-     >= public.booking_int('max_pending_per_client', 3) then
-    raise exception 'too_many_pending' using errcode = '22023';
-  end if;
-
   select * into s from public.services where id = p_service and active and bookable_online;
   if not found then raise exception 'service_unavailable' using errcode = '22023'; end if;
 
@@ -272,6 +266,14 @@ begin
 
   -- serializa reservas para evitar dois agendamentos no mesmo horário
   perform pg_advisory_xact_lock(hashtext('studio_lv_booking'));
+
+  -- limite de pedidos pendentes (contado DEPOIS do lock para resistir a pedidos simultâneos)
+  perform 1 from public.clients where id = v_client for update;
+  if (select count(*) from public.appointments a
+       where a.client_id = v_client and a.status = 'pendente' and a.starts_at > now())
+     >= public.booking_int('max_pending_per_client', 3) then
+    raise exception 'too_many_pending' using errcode = '22023';
+  end if;
 
   if not exists (select 1 from public.get_available_slots(v_date, p_service, v_len) g
                   where g.starts_at = p_starts_at) then
@@ -308,7 +310,7 @@ begin
     join public.clients c on c.id = ap.client_id
    where ap.id = p_id and c.user_id = auth.uid();
   if not found then raise exception 'not_found' using errcode = '22023'; end if;
-  if a.status not in ('pendente', 'confirmado') then
+  if a.status not in ('pendente', 'confirmado') or a.starts_at <= now() then
     raise exception 'not_cancellable' using errcode = '22023';
   end if;
   if a.status = 'confirmado'
@@ -355,6 +357,15 @@ returns jsonb
 language sql stable security definer set search_path = '' as $$
   select jsonb_build_object(
     'perfil', public.get_my_profile(),
+    'ficha_tecnica', (select to_jsonb(r) - 'notes' - 'client_id'
+                        from public.client_records r
+                        join public.clients c on c.id = r.client_id
+                       where c.user_id = auth.uid()),
+    'fotos_registradas', coalesce((select jsonb_agg(p)
+                        from public.service_history h
+                        join public.clients c on c.id = h.client_id,
+                             unnest(h.photo_paths) p
+                       where c.user_id = auth.uid()), '[]'::jsonb),
     'agendamentos', coalesce((select jsonb_agg(to_jsonb(x)) from public.get_my_appointments() x), '[]'::jsonb),
     'procedimentos', coalesce((select jsonb_agg(to_jsonb(y)) from public.get_my_history() y), '[]'::jsonb),
     'gerado_em', now()
@@ -372,6 +383,17 @@ begin
   if exists (select 1 from public.admins where user_id = v_uid) then
     raise exception 'admin_cannot_self_delete' using errcode = '22023';
   end if;
+  -- fotos no Storage não podem ser apagadas por SQL: entram na fila de limpeza,
+  -- que o painel da admin esvazia automaticamente.
+  insert into public.storage_purge (path)
+  select x.path from (
+    select c.photo_path as path from public.clients c where c.user_id = v_uid and c.photo_path is not null
+    union all
+    select unnest(h.photo_paths) from public.service_history h
+      join public.clients c on c.id = h.client_id where c.user_id = v_uid
+  ) x
+  on conflict do nothing;
+
   delete from public.clients where user_id = v_uid;
   delete from auth.users where id = v_uid;
 end $$;

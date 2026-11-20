@@ -15,6 +15,7 @@ alter table public.service_history     enable row level security;
 alter table public.gallery_items       enable row level security;
 alter table public.site_settings       enable row level security;
 alter table public.audit_log           enable row level security;
+alter table public.storage_purge       enable row level security;
 
 -- Força RLS até para o dono da tabela via API
 alter table public.clients         force row level security;
@@ -30,6 +31,10 @@ revoke all on public.admins, public.clients, public.client_records,
               public.appointments, public.service_history, public.audit_log,
               public.schedule_exceptions
   from anon;
+
+-- TRUNCATE/TRIGGER/REFERENCES ignoram RLS: ninguém pela API precisa deles
+revoke truncate, trigger, references on all tables in schema public from anon, authenticated;
+revoke all on public.storage_purge from anon;
 
 -- Ninguém escreve na auditoria nem na tabela de admins pela API
 revoke insert, update, delete, truncate on public.audit_log from authenticated;
@@ -60,6 +65,10 @@ create policy service_history_admin_all on public.service_history
   using ((select public.is_admin())) with check ((select public.is_admin()));
 
 create policy schedule_exceptions_admin_all on public.schedule_exceptions
+  for all to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+
+create policy storage_purge_admin_all on public.storage_purge
   for all to authenticated
   using ((select public.is_admin())) with check ((select public.is_admin()));
 

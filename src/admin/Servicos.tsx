@@ -41,8 +41,8 @@ export default function ServicosAdmin() {
           return (
             <li key={s.id} className={`panel flex flex-wrap items-center gap-4 p-4 ${!s.active ? 'opacity-50' : ''}`}>
               <div className="flex flex-col">
-                <button onClick={() => move(i, -1)} disabled={i === 0} className="p-1 disabled:opacity-20" aria-label="Subir"><Up /></button>
-                <button onClick={() => move(i, 1)} disabled={i === list.length - 1} className="p-1 disabled:opacity-20" aria-label="Descer"><Down /></button>
+                <button onClick={() => move(i, -1)} disabled={i === 0} className="p-2.5 disabled:opacity-20" aria-label="Subir"><Up /></button>
+                <button onClick={() => move(i, 1)} disabled={i === list.length - 1} className="p-2.5 disabled:opacity-20" aria-label="Descer"><Down /></button>
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-display text-2xl">{s.name} {promo && <span className="chip ml-2 border-bronze !text-[0.55rem] text-bronze">promoção</span>}</p>

@@ -30,7 +30,7 @@ export default function Galeria() {
       <section className="mx-auto max-w-[1320px] px-5 pb-28 sm:px-8">
         <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-2 sm:mx-0 sm:px-0">
           {cats.map((c) => (
-            <button key={c} onClick={() => setCat(c)} className={`chip shrink-0 transition ${c === cat ? 'border-espresso bg-espresso text-marfim' : 'hover:border-espresso'}`}>{c}</button>
+            <button key={c} onClick={() => setCat(c)} className={`chip min-h-11 shrink-0 px-4 transition ${c === cat ? 'border-espresso bg-espresso text-marfim' : 'hover:border-espresso'}`}>{c}</button>
           ))}
         </div>
         <div className="mt-10 columns-2 gap-3 sm:gap-4 lg:columns-3">

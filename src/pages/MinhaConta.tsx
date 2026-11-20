@@ -44,7 +44,7 @@ export default function MinhaConta() {
           <button onClick={signOut} className="btn-ghost"><Logout /> Sair</button>
         </div>
       </div>
-      <div role="tablist" className="mt-12 flex gap-8 border-b border-espresso/15">
+      <div role="tablist" className="no-scrollbar -mx-5 mt-12 flex gap-6 overflow-x-auto whitespace-nowrap border-b border-espresso/15 px-5 sm:mx-0 sm:gap-8 sm:px-0">
         {([['agenda', 'Agendamentos'], ['historico', 'Meu histórico'], ['dados', 'Meus dados']] as const).map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
             className={`-mb-px border-b-2 pb-4 text-[0.74rem] font-semibold uppercase tracking-[0.18em] transition ${tab === k ? 'border-espresso text-espresso' : 'border-transparent text-espresso/45 hover:text-espresso'}`}>{l}</button>

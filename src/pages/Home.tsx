@@ -33,7 +33,7 @@ export default function Home() {
             <Link to="/servicos" className="btn-ghost !text-marfim decoration-areia/50">Ver serviços e preços</Link>
           </div>
         </div>
-        <div className="absolute bottom-6 right-8 hidden items-center gap-3 text-[0.68rem] uppercase tracking-[0.3em] text-marfim/60 lg:flex">
+        <div className="absolute bottom-6 right-24 hidden items-center gap-3 text-[0.68rem] uppercase tracking-[0.3em] text-marfim/60 lg:flex">
           <Pin /> Vila Rosália · Guarulhos
         </div>
       </section>
@@ -82,14 +82,14 @@ export default function Home() {
               const p = priceSummary(s)
               return (
                 <Reveal as="li" key={s.id} delay={i * 50}>
-                  <Link to={`/agendar?servico=${s.id}`} className="group grid grid-cols-[2.5rem_1fr_auto] items-baseline gap-4 border-b border-espresso/15 py-7 transition sm:grid-cols-[4rem_1fr_7rem_13rem]">
+                  <Link to={`/agendar?servico=${s.id}`} className="group grid grid-cols-[2.5rem_1fr] items-baseline gap-x-4 border-b border-espresso/15 py-7 transition sm:grid-cols-[4rem_1fr_7rem_13rem]">
                     <span className="text-xs font-semibold text-bronze">{String(i + 1).padStart(2, '0')}</span>
                     <span>
                       <span className="font-display text-[1.9rem] leading-none transition group-hover:italic sm:text-[2.4rem]">{s.name}</span>
                       <span className="mt-2 block max-w-md text-sm text-espresso/60">{s.description}</span>
                     </span>
                     <span className="hidden text-sm text-espresso/55 sm:block">{durationLabel(s.duration_min)}</span>
-                    <span className="text-right">
+                    <span className="col-start-2 mt-3 sm:col-start-auto sm:mt-0 sm:text-right">
                       {p.promo && <span className="mb-1 block text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-bronze">Promoção</span>}
                       <span className="whitespace-nowrap font-display text-xl sm:text-2xl">{p.label}</span>
                     </span>
@@ -151,7 +151,7 @@ export default function Home() {
         <div className="mt-8 flex justify-center gap-3">
           {TESTIMONIALS.map((x, i) => (
             <button key={x.name} onClick={() => setT(i)} aria-label={`Depoimento de ${x.name}`}
-              className={`h-[3px] transition-all ${i === t ? 'w-10 bg-espresso' : 'w-5 bg-espresso/20 hover:bg-espresso/40'}`} />
+              className={`h-11 bg-clip-content py-5 transition-all ${i === t ? 'w-10 bg-espresso' : 'w-5 bg-espresso/20 hover:bg-espresso/40'}`} />
           ))}
         </div>
       </section>

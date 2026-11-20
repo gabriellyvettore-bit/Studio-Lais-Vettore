@@ -66,6 +66,7 @@ export default function GaleriaAdmin() {
           <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" disabled={busy} onChange={(e) => upload(e.target.files)} />
         </label>} />
       <p className="-mt-4 mb-6 text-sm text-espresso/55">As fotos são otimizadas automaticamente. A ordem aqui é a ordem no site — as primeiras aparecem na página inicial.</p>
+      {list.length === 0 && <p className="panel p-10 text-center text-espresso/55">Nenhuma foto ainda. Toque em “Adicionar fotos”.</p>}
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {list.map((g, i) => (
           <li key={g.id} className={`panel overflow-hidden ${!g.active ? 'opacity-50' : ''}`}>
@@ -80,12 +81,12 @@ export default function GaleriaAdmin() {
               </select>
               <div className="flex items-center justify-between pt-1">
                 <div className="flex">
-                  <button onClick={() => move(i, -1)} disabled={i === 0} className="p-1.5 disabled:opacity-20" aria-label="Mover para antes"><Up /></button>
-                  <button onClick={() => move(i, 1)} disabled={i === list.length - 1} className="p-1.5 disabled:opacity-20" aria-label="Mover para depois"><Down /></button>
+                  <button onClick={() => move(i, -1)} disabled={i === 0} className="p-2.5 disabled:opacity-20" aria-label="Mover para antes"><Up /></button>
+                  <button onClick={() => move(i, 1)} disabled={i === list.length - 1} className="p-2.5 disabled:opacity-20" aria-label="Mover para depois"><Down /></button>
                 </div>
                 <label className="flex items-center gap-1 text-xs"><input type="checkbox" className="accent-[#2b1f19]" checked={g.active} onChange={(e) => update(g, { active: e.target.checked })} /> visível</label>
                 <label className="cursor-pointer text-xs underline">trocar<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => upload(e.target.files, g)} /></label>
-                <button onClick={() => remove(g)} className="p-1.5 text-erro" aria-label="Remover"><Trash /></button>
+                <button onClick={() => remove(g)} className="p-2.5 text-erro" aria-label="Remover"><Trash /></button>
               </div>
             </div>
           </li>

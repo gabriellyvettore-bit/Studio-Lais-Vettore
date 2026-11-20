@@ -232,6 +232,64 @@ begin
   end if;
   raise notice 'OK  histórico da cliente é somente leitura e sem dados internos';
 end $$;
+
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+set role authenticated;
+do $$
+declare j jsonb;
+begin
+  j := public.export_my_data();
+  if (j -> 'ficha_tecnica' ->> 'allergies') is distinct from 'Nenhuma' then
+    raise exception 'FALHOU: exportação LGPD sem a ficha técnica';
+  end if;
+  if (j -> 'ficha_tecnica') ? 'notes' then raise exception 'FALHOU: exportação com anotação interna'; end if;
+  raise notice 'OK  exportação LGPD inclui a ficha técnica';
+end $$;
+reset role;
+
+-- agendamento pendente no passado não pode ser cancelado
+do $$
+declare v_id uuid;
+begin
+  insert into public.appointments (client_id, service_name, starts_at, ends_at, status)
+  select id, 'Antigo', now() - interval '2 days', now() - interval '2 days' + interval '1 hour', 'pendente'
+    from public.clients where full_name = 'Ana Teste' returning id into v_id;
+  perform set_config('test.old', v_id::text, false);
+end $$;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+set role authenticated;
+do $$
+begin
+  begin
+    perform public.cancel_my_appointment(current_setting('test.old')::uuid);
+    raise exception 'FALHOU: cancelou agendamento no passado';
+  exception when sqlstate '22023' then raise notice 'OK  não cancela agendamento que já passou'; end;
+end $$;
+reset role;
+
+-- limite de pedidos pendentes por cliente
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+set role authenticated;
+do $$
+declare v_service uuid; d date; v_slot timestamptz; n int := 0;
+begin
+  select id into v_service from public.services where name = 'Corte + Escova';
+  for d in select day from public.get_available_days(v_service, null, null, 40) loop
+    select starts_at into v_slot from public.get_available_slots(d, v_service, null) limit 1;
+    begin
+      perform public.book_appointment(v_service, null, v_slot, null);
+      n := n + 1;
+    exception when sqlstate '22023' then
+      if sqlerrm <> 'too_many_pending' then raise; end if;
+      exit;
+    end;
+  end loop;
+  if (select count(*) from public.get_my_appointments() where status = 'pendente' and starts_at > now()) > 3 then
+    raise exception 'FALHOU: passou do limite de pendentes';
+  end if;
+  raise notice 'OK  limite de % pedidos pendentes respeitado', 3;
+end $$;
+reset role;
 reset role;
 
 -- ---------------------------------------------------------------------
@@ -273,6 +331,7 @@ end $$;
 -- ---------------------------------------------------------------------
 -- 8. LGPD: excluir conta
 -- ---------------------------------------------------------------------
+update public.clients set photo_path = 'cliente-b/perfil/foto.webp' where full_name = 'Bia Teste';
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
 set role authenticated;
 select public.delete_my_account();
@@ -285,7 +344,10 @@ begin
   if exists (select 1 from public.clients where full_name = 'Bia Teste') then
     raise exception 'FALHOU: dados não excluídos';
   end if;
-  raise notice 'OK  exclusão de conta (LGPD)';
+  if not exists (select 1 from public.storage_purge where path = 'cliente-b/perfil/foto.webp') then
+    raise exception 'FALHOU: foto da cliente não entrou na fila de exclusão';
+  end if;
+  raise notice 'OK  exclusão de conta (LGPD), fotos na fila de limpeza';
 end $$;
 
 \echo '==== TODOS OS TESTES DE SEGURANÇA PASSARAM ===='

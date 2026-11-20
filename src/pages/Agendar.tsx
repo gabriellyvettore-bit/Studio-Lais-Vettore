@@ -60,12 +60,13 @@ export default function Agendar() {
     <section className="mx-auto max-w-[1100px] px-5 pb-28 pt-28 sm:px-8 sm:pt-36">
       <div className="flex items-center justify-between gap-4">
         <p className="kicker">Agendar horário</p>
-        {step > 1 && <button onClick={back} className="btn-ghost !text-[0.7rem]"><ArrowLeft /> Voltar</button>}
+        {step > 1 && <button onClick={back} className="btn-ghost py-3 !text-[0.7rem]"><ArrowLeft /> Voltar</button>}
       </div>
-      <ol className="mt-6 grid grid-cols-4 gap-2" aria-label="Etapas">
+      <p className="mt-4 text-xs text-espresso/60 sm:hidden">Etapa {step} de 4</p>
+      <ol className="mt-3 grid grid-cols-4 gap-2 sm:mt-6" aria-label="Etapas">
         {steps.map((s, i) => (
-          <li key={s} className={`border-t-2 pt-3 text-[0.66rem] font-semibold uppercase tracking-[0.16em] transition ${i + 1 <= step ? 'border-espresso text-espresso' : 'border-espresso/15 text-espresso/35'} ${i === 1 && service && !needsLength ? 'opacity-40' : ''}`}>
-            <span className="hidden sm:inline">{String(i + 1).padStart(2, '0')} · </span>{s}
+          <li key={s} className={`truncate border-t-2 pt-3 text-[0.66rem] font-semibold uppercase tracking-[0.16em] transition ${i + 1 <= step ? 'border-espresso text-espresso' : 'border-espresso/15 text-espresso/35'} ${i === 1 && service && !needsLength ? 'opacity-40' : ''}`}>
+            <span className="hidden sm:inline">{String(i + 1).padStart(2, '0')} · </span><span className={i + 1 === step ? '' : 'sr-only sm:not-sr-only'}>{s}</span>
           </li>
         ))}
       </ol>
@@ -232,9 +233,9 @@ function SlotPicker({ service, length, date, onDate, onSlot }:
         <h1 className="text-[clamp(2.4rem,5vw,3.6rem)] leading-none">Escolha o <em className="text-cacau">dia.</em></h1>
         <p className="mt-4 text-sm text-espresso/60">{service.name}{length ? ` · ${lengthLabel(length)}` : ''} · mostramos apenas os dias com horário livre.</p>
         <div className="mt-8 flex items-center justify-between">
-          <button onClick={() => setMonth((m) => addMonths(m, -1))} disabled={format(month, 'yyyy-MM') <= today.slice(0, 7)} className="p-2 disabled:opacity-25" aria-label="Mês anterior"><ArrowLeft /></button>
+          <button onClick={() => setMonth((m) => addMonths(m, -1))} disabled={format(month, 'yyyy-MM') <= today.slice(0, 7)} className="p-3 disabled:opacity-25" aria-label="Mês anterior"><ArrowLeft /></button>
           <p className="font-display text-2xl capitalize">{format(month, 'MMMM yyyy', { locale: ptBR })}</p>
-          <button onClick={() => setMonth((m) => addMonths(m, 1))} disabled={month >= maxMonth} className="p-2 disabled:opacity-25" aria-label="Próximo mês"><Arrow /></button>
+          <button onClick={() => setMonth((m) => addMonths(m, 1))} disabled={month >= maxMonth} className="p-3 disabled:opacity-25" aria-label="Próximo mês"><Arrow /></button>
         </div>
         <div className="mt-4 grid grid-cols-7 text-center text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-espresso/45">
           {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => <span key={i} className="py-2">{d}</span>)}
@@ -245,7 +246,7 @@ function SlotPicker({ service, length, date, onDate, onSlot }:
             const ok = days?.has(ymd)
             const sel = ymd === date
             return (
-              <button key={ymd} disabled={!ok || !isSameMonth(d, month)} onClick={() => onDate(ymd)}
+              <button key={ymd} disabled={!ok || !isSameMonth(d, month)} onClick={() => { onDate(ymd); if (window.innerWidth < 1024) requestAnimationFrame(() => document.getElementById('horarios')?.scrollIntoView({ behavior: 'smooth', block: 'start' })) }}
                 className={`relative aspect-square text-[0.95rem] transition ${!isSameMonth(d, month) ? 'invisible' : ''} ${sel ? 'bg-espresso text-marfim' : ok ? 'bg-white/70 hover:bg-areia' : 'text-espresso/25'}`}
                 aria-label={`${format(d, "d 'de' MMMM", { locale: ptBR })}${ok ? ', disponível' : ', indisponível'}`} aria-pressed={sel}>
                 {format(d, 'd')}
@@ -259,7 +260,7 @@ function SlotPicker({ service, length, date, onDate, onSlot }:
       </div>
 
       <div className="lg:col-span-5 lg:col-start-8">
-        <h2 className="text-[clamp(2rem,4vw,3rem)] leading-none">E o <em className="text-cacau">horário.</em></h2>
+        <h2 id="horarios" className="scroll-mt-24 text-[clamp(2rem,4vw,3rem)] leading-none">E o <em className="text-cacau">horário.</em></h2>
         {!date ? <p className="mt-6 text-espresso/50">Selecione um dia no calendário.</p>
           : slots === null ? <p className="mt-6 animate-pulse text-espresso/50">Buscando horários…</p>
           : slots.length === 0 ? <p className="mt-6 text-espresso/60">Esse dia acabou de lotar. Escolha outro.</p>

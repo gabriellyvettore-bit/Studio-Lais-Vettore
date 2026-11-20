@@ -199,6 +199,12 @@ create table public.audit_log (
 );
 create index audit_log_at_idx on public.audit_log (at desc);
 
+-- Fila de arquivos a apagar do Storage (ex.: cliente excluiu a conta)
+create table public.storage_purge (
+  path      text primary key,
+  queued_at timestamptz not null default now()
+);
+
 -- ---------------------------------------------------------------------
 -- updated_at automático
 -- ---------------------------------------------------------------------

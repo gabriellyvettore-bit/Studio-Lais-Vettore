@@ -7,6 +7,15 @@ import { AdminTitle, toast } from './ui'
 import { Arrow } from '../components/Icons'
 import { useAuth } from '../context/Auth'
 
+/** Apaga do Storage as fotos de clientes que excluíram a conta (LGPD). */
+async function purgeStorage() {
+  const { data } = await db().from('storage_purge').select('path').limit(500)
+  const paths = (data ?? []).map((r) => r.path as string)
+  if (!paths.length) return
+  const { error } = await db().storage.from('clientes').remove(paths)
+  if (!error) await db().from('storage_purge').delete().in('path', paths)
+}
+
 export default function Painel() {
   const { profile, session } = useAuth()
   const [today, setToday] = useState<Appointment[]>([])
@@ -24,7 +33,7 @@ export default function Painel() {
     if (a.error || b.error || c.error) toast(friendlyError(a.error ?? b.error ?? c.error), true)
     setToday((a.data as Appointment[]) ?? []); setPending((b.data as Appointment[]) ?? []); setMonth((c.data as Appointment[]) ?? [])
   }
-  useEffect(() => { void load() }, [])
+  useEffect(() => { void load(); void purgeStorage() }, [])
 
   async function setStatus(id: string, status: 'confirmado' | 'recusado') {
     const { error } = await db().from('appointments').update({ status }).eq('id', id)
@@ -48,7 +57,7 @@ export default function Painel() {
       <div className="mt-10 grid gap-8 xl:grid-cols-2">
         <section className="panel p-6">
           <div className="flex items-center justify-between"><h2 className="text-3xl">Aguardando aprovação</h2><Link to="/admin/agenda" className="btn-ghost !text-[0.7rem]">Agenda <Arrow /></Link></div>
-          {pending.length === 0 ? <p className="mt-4 text-sm text-espresso/55">Nada pendente. ✓</p> : (
+          {pending.length === 0 ? <p className="mt-4 text-sm text-espresso/55">Nada pendente.</p> : (
             <ul className="mt-4 divide-y divide-espresso/10">
               {pending.map((a) => (
                 <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 py-4">

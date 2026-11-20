@@ -22,7 +22,7 @@ export default function Noivas() {
           </div>
           <div className="grid grid-cols-2 gap-3 lg:col-span-6">
             <div className="aspect-[3/4] overflow-hidden"><Img src="img/galeria/noiva-coque.webp" alt="Penteado de noiva" loading="eager" /></div>
-            <div className="mt-16 aspect-[3/4] overflow-hidden"><Img src="img/galeria/noiva-coque-2.webp" alt="Detalhes do penteado de noiva" loading="eager" /></div>
+            <div className="mt-16 aspect-[3/4] overflow-hidden"><Img src="img/galeria/lais-finalizando.webp" alt="Finalização com ondas feita no studio" loading="eager" /></div>
           </div>
         </div>
       </section>

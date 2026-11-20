@@ -60,7 +60,7 @@ export function Layout() {
           <div className="h-[calc(100dvh-72px)] overflow-y-auto border-t border-espresso/10 bg-marfim px-6 pb-10 pt-8 lg:hidden">
             <nav className="flex flex-col" aria-label="Menu">
               {[{ to: '/', label: 'Início' }, ...NAV, ...(isConfigured ? [{ to: session ? '/conta' : '/entrar', label: session ? 'Minha conta' : 'Entrar' }] : [])].map((n, i) => (
-                <NavLink key={n.to} to={n.to} end className="flex items-baseline justify-between border-b border-espresso/10 py-5">
+                <NavLink key={n.to} to={n.to} end className="flex items-baseline justify-between border-b border-espresso/10 py-5 [&.active>span:first-child]:italic [&.active>span:first-child]:text-cacau">
                   <span className="font-display text-4xl">{n.label}</span>
                   <span className="text-xs text-bronze">0{i + 1}</span>
                 </NavLink>
@@ -86,7 +86,7 @@ function WhatsFloat() {
   const wa = hasWhatsapp(settings.contact)
   return (
     <a href={contactLink(settings.contact)} target="_blank" rel="noopener noreferrer"
-      className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-espresso text-marfim shadow-[0_10px_30px_-10px_rgba(43,31,25,.6)] transition hover:scale-105 hover:bg-cacau"
+      className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-12 w-12 sm:right-5 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-espresso text-marfim shadow-[0_10px_30px_-10px_rgba(43,31,25,.6)] transition hover:scale-105 hover:bg-cacau"
       aria-label={wa ? 'Conversar pelo WhatsApp' : 'Enviar mensagem pelo Instagram'}>
       {wa ? <Whats width={26} height={26} /> : <Instagram width={24} height={24} />}
     </a>
@@ -119,16 +119,16 @@ function Footer() {
             <div>
               <p className="kicker !text-bronze-claro">Contato</p>
               <ul className="mt-4 space-y-2 text-sm text-marfim/80">
-                {c.phone && <li><a className="flex items-center gap-2 hover:text-marfim" href={`tel:+55${c.phone.replace(/\D/g, '')}`}><Phone /> {c.phone}</a></li>}
-                <li><a className="flex items-center gap-2 hover:text-marfim" href={contactLink(c)} target="_blank" rel="noopener noreferrer"><Whats /> {hasWhatsapp(c) ? 'WhatsApp' : 'Mensagem'}</a></li>
-                <li><a className="flex items-center gap-2 hover:text-marfim" href={`https://instagram.com/${c.instagram}`} target="_blank" rel="noopener noreferrer"><Instagram /> @{c.instagram}</a></li>
+                {c.phone && <li><a className="flex min-h-11 items-center gap-2 hover:text-marfim" href={`tel:+55${c.phone.replace(/\D/g, '')}`}><Phone /> {c.phone}</a></li>}
+                <li><a className="flex min-h-11 items-center gap-2 hover:text-marfim" href={contactLink(c)} target="_blank" rel="noopener noreferrer"><Whats /> {hasWhatsapp(c) ? 'WhatsApp' : 'Mensagem'}</a></li>
+                <li><a className="flex min-h-11 items-center gap-2 hover:text-marfim" href={`https://instagram.com/${c.instagram}`} target="_blank" rel="noopener noreferrer"><Instagram /> @{c.instagram}</a></li>
               </ul>
             </div>
           </div>
         </div>
-        <div className="mt-20 flex flex-col gap-3 border-t border-marfim/15 pt-6 text-[0.72rem] uppercase tracking-[0.16em] text-marfim/50 sm:flex-row sm:justify-between">
+        <div className="mt-20 flex flex-col gap-3 border-t border-marfim/15 pb-20 pt-6 lg:pb-0 text-[0.72rem] uppercase tracking-[0.16em] text-marfim/50 sm:flex-row sm:justify-between">
           <span>© {new Date().getFullYear()} Studio Lais Vettore</span>
-          <span className="flex gap-6"><Link to="/privacidade" className="hover:text-marfim">Privacidade</Link><Link to="/admin" className="hover:text-marfim">Área do studio</Link></span>
+          <span className="flex gap-6"><Link to="/privacidade" className="inline-flex min-h-11 items-center hover:text-marfim">Privacidade</Link><Link to="/admin" className="inline-flex min-h-11 items-center hover:text-marfim">Área do studio</Link></span>
         </div>
       </div>
     </footer>
