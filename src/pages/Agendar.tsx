@@ -3,12 +3,12 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, startOfMonth, startOfWeek } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useSiteData } from '../context/SiteData'
-import { rememberReturn, useAuth } from '../context/Auth'
 import { supabase, isConfigured, friendlyError } from '../lib/supabase'
+import { maskPhone, onlyDigits } from '../lib/format'
 import { monthTitle, HAIR_LENGTHS, durationLabel, effectivePrice, lengthLabel, longDate, money, priceFor, priceSummary, promoActive, timeSP, todaySP } from '../lib/format'
 import { contactLink } from '../lib/whatsapp'
 import type { HairLength, Service } from '../lib/types'
-import { LoginBox, ProfileForm } from '../components/AuthForms'
+import { getGuest, saveGuest, clearGuest, maskBirth, parseBirth } from '../lib/guest'
 import { ArrowLeft, Arrow, Check, Whats } from '../components/Icons'
 
 const DRAFT = 'slv:draft'
@@ -28,7 +28,6 @@ export function NotReady() {
 
 export default function Agendar() {
   const { services, settings } = useSiteData()
-  const { session, profile, ready } = useAuth()
   const [params] = useSearchParams()
   const bookable = services.filter((s) => s.bookable_online)
 
@@ -38,8 +37,11 @@ export default function Agendar() {
     const q = params.get('servico')
     return q && q !== d.serviceId ? { serviceId: q } : d
   })
-  const [done, setDone] = useState(false)
+  const [done, setDone] = useState<string | false>(false)
   useEffect(() => { sessionStorage.setItem(DRAFT, JSON.stringify(draft)) }, [draft])
+  // a cada passo (e no final) volta para o topo da tela
+  const stepKey = `${draft.serviceId}|${draft.length}|${draft.slot}|${done}`
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }) }, [stepKey])
 
   const service = bookable.find((s) => s.id === draft.serviceId)
   const needsLength = service?.price_mode === 'por_comprimento'
@@ -52,18 +54,19 @@ export default function Agendar() {
   }
 
   if (!isConfigured) return <NotReady />
-  if (done) return <Success onAgain={() => { setDone(false); setDraft({}) }} />
+  if (done) return <Success name={done.trim()} onAgain={() => { setDone(false); setDraft({}) }} />
 
-  const steps = ['Serviço', 'Comprimento', 'Data e horário', 'Confirmar']
+  const steps = ['Serviço', 'Cabelo', 'Dia e hora', 'Seus dados']
 
   return (
-    <section className="mx-auto max-w-[1100px] px-5 pb-28 pt-28 sm:px-8 sm:pt-36">
-      <div className="flex items-center justify-between gap-4">
-        <p className="kicker">Agendar horário</p>
-        {step > 1 && <button onClick={back} className="btn-ghost py-3 !text-[0.7rem]"><ArrowLeft /> Voltar</button>}
+    <section className="mx-auto max-w-[1100px] px-5 pb-16 pt-24 sm:px-8 sm:pt-36">
+      <div className="flex min-h-12 items-center justify-between gap-4">
+        {step > 1
+          ? <button onClick={back} className="-ml-2 flex min-h-12 items-center gap-2 px-2 text-[1rem] font-medium"><ArrowLeft width={22} height={22} /> Voltar</button>
+          : <p className="kicker">Agendar horário</p>}
+        <p className="text-[0.9rem] text-espresso/60">Passo {needsLength || step === 1 ? step : step - 1} de {needsLength || step === 1 ? 4 : 3}</p>
       </div>
-      <p className="mt-4 text-xs text-espresso/60 sm:hidden">Etapa {step} de 4</p>
-      <ol className="mt-3 grid grid-cols-4 gap-2 sm:mt-6" aria-label="Etapas">
+      <ol className="mt-2 grid grid-cols-4 gap-2 sm:mt-6" aria-label="Etapas">
         {steps.map((s, i) => (
           <li key={s} className={`truncate border-t-2 pt-3 text-[0.66rem] font-semibold uppercase tracking-[0.16em] transition ${i + 1 <= step ? 'border-espresso text-espresso' : 'border-espresso/15 text-espresso/35'} ${i === 1 && service && !needsLength ? 'opacity-40' : ''}`}>
             <span className="hidden sm:inline">{String(i + 1).padStart(2, '0')} · </span><span className={i + 1 === step ? '' : 'sr-only sm:not-sr-only'}>{s}</span>
@@ -71,16 +74,16 @@ export default function Agendar() {
         ))}
       </ol>
 
-      <div className="mt-12 [animation:fade_.5s_ease]" key={step}>
+      <div className="mt-8 [animation:fade_.5s_ease] sm:mt-12" key={step}>
         {step === 1 && (
           <>
-            <h1 className="text-[clamp(2.4rem,5vw,3.8rem)] leading-none">Qual serviço você <em className="text-cacau">deseja?</em></h1>
-            <ul className="mt-10 grid gap-3 sm:grid-cols-2">
+            <h1 className="text-[clamp(2.3rem,5vw,3.8rem)] leading-none">O que você <em className="text-cacau">quer fazer?</em></h1>
+            <ul className="mt-6 grid gap-3 sm:mt-10 sm:grid-cols-2">
               {bookable.map((s) => <ServiceCard key={s.id} s={s} onPick={() => set({ serviceId: s.id, length: s.price_mode === 'unico' ? null : undefined, slot: undefined, date: undefined })} />)}
             </ul>
             <a href={contactLink(settings.contact, 'Olá! Gostaria de agendar um procedimento que não está no site.')} target="_blank" rel="noopener noreferrer"
               className="mt-3 flex items-center justify-between gap-4 border border-dashed border-espresso/30 p-6 transition hover:border-espresso">
-              <span><span className="block font-display text-2xl">Outros procedimentos</span><span className="mt-1 block text-sm text-espresso/60">Mega hair, maquiagem, dia da noiva, corte sem escova… combine com a Laís.</span></span>
+              <span><span className="block font-display text-2xl">Outros procedimentos</span><span className="mt-1 block text-sm text-espresso/60">Mega hair, maquiagem, corte sem escova… combine com a Laís.</span></span>
               <Whats width={24} height={24} className="shrink-0 text-bronze" />
             </a>
           </>
@@ -88,21 +91,21 @@ export default function Agendar() {
 
         {step === 2 && service && (
           <>
-            <h1 className="text-[clamp(2.4rem,5vw,3.8rem)] leading-none">Qual o comprimento do <em className="text-cacau">seu cabelo?</em></h1>
-            <p className="mt-4 text-espresso/60">{service.name} — o valor varia conforme o tamanho.</p>
-            <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <h1 className="text-[clamp(2.3rem,5vw,3.8rem)] leading-none">Qual o tamanho do <em className="text-cacau">seu cabelo?</em></h1>
+            <p className="mt-3 text-espresso/65">{service.name} — o valor muda conforme o tamanho.</p>
+            <ul className="mt-6 grid grid-cols-2 gap-3 sm:mt-10 lg:grid-cols-4">
               {HAIR_LENGTHS.map((l, i) => {
                 const p = priceFor(service, l.value)
                 const off = p?.unavailable
                 return (
                   <li key={l.value}>
                     <button disabled={off} onClick={() => set({ length: l.value, slot: undefined, date: undefined })}
-                      className="group flex h-full w-full flex-col border border-espresso/15 bg-white/60 p-5 text-left transition hover:border-espresso disabled:cursor-not-allowed disabled:opacity-45">
+                      className="group flex h-full w-full flex-col items-center border border-espresso/15 bg-white/70 p-4 text-center transition active:bg-areia hover:border-espresso disabled:cursor-not-allowed disabled:opacity-45">
                       <LengthFigure level={i} />
-                      <span className="mt-5 font-display text-3xl">{l.label}</span>
-                      <span className="mt-1 text-sm text-espresso/55">{l.hint}</span>
-                      <span className="mt-5 border-t border-espresso/10 pt-3 text-sm">
-                        {off ? 'Sob consulta pelo WhatsApp' : p?.price == null ? <span className="text-espresso/60">Valor confirmado no salão</span>
+                      <span className="mt-3 font-display text-[1.8rem] leading-none">{l.label}</span>
+                      <span className="mt-1 text-[0.85rem] leading-snug text-espresso/60">{l.hint}</span>
+                      <span className="mt-3 w-full border-t border-espresso/10 pt-2 text-[0.9rem]">
+                        {off ? 'Só pelo WhatsApp' : p?.price == null ? <span className="text-espresso/65">Valor no salão</span>
                           : <>{promoActive(p) && <s className="mr-2 text-espresso/40">{money(p.price)}</s>}<strong className="font-display text-2xl font-normal">{money(effectivePrice(p))}</strong></>}
                       </span>
                     </button>
@@ -122,26 +125,14 @@ export default function Agendar() {
         )}
 
         {step === 4 && service && draft.slot && (
-          <div className="grid gap-10 lg:grid-cols-12">
+          <div className="grid gap-8 lg:grid-cols-12">
             <div className="lg:col-span-5">
-              <h1 className="text-[clamp(2.4rem,5vw,3.6rem)] leading-none">Confira e <em className="text-cacau">confirme.</em></h1>
+              <h1 className="text-[clamp(2.3rem,5vw,3.6rem)] leading-none">Quase <em className="text-cacau">pronto!</em></h1>
               <Summary service={service} length={draft.length ?? null} slot={draft.slot} />
-              <label className="label mt-8" htmlFor="note">Observação para a Laís (opcional)</label>
-              <textarea id="note" rows={3} maxLength={500} className="field resize-none" placeholder="Ex.: quero manter o comprimento, tenho alergia a…" value={draft.note ?? ''} onChange={(e) => set({ note: e.target.value })} />
             </div>
             <div className="lg:col-span-6 lg:col-start-7">
-              {!ready ? <p className="text-espresso/50">Carregando…</p>
-                : !session ? (
-                  <div onClickCapture={() => rememberReturn('/agendar')}>
-                    <LoginBox title="Entre para finalizar" subtitle="Seu horário fica guardado enquanto você entra." />
-                  </div>
-                ) : !profile ? (
-                  <div className="panel p-6 sm:p-8">
-                    <h2 className="text-3xl">Só falta seu cadastro</h2>
-                    <p className="mt-2 mb-8 text-sm text-espresso/60">Usamos para confirmar o horário com você.</p>
-                    <ProfileForm submitLabel="Salvar e continuar" onDone={() => undefined} />
-                  </div>
-                ) : <Confirm draft={draft} service={service} onDone={() => { sessionStorage.removeItem(DRAFT); setDone(true) }} onTaken={() => set({ slot: undefined })} />}
+              <GuestForm draft={draft} service={service} onNote={(note) => set({ note })}
+                onDone={(name) => { sessionStorage.removeItem(DRAFT); setDone(name || ' ') }} onTaken={() => set({ slot: undefined })} />
             </div>
           </div>
         )}
@@ -302,48 +293,89 @@ function Summary({ service, length, slot }: { service: Service; length: HairLeng
   )
 }
 
-function Confirm({ draft, service, onDone, onTaken }: { draft: Draft; service: Service; onDone: () => void; onTaken: () => void }) {
-  const { profile } = useAuth()
+function GuestForm({ draft, service, onNote, onDone, onTaken }:
+  { draft: Draft; service: Service; onNote: (n: string) => void; onDone: (firstName: string) => void; onTaken: () => void }) {
+  const [guest, setGuest] = useState(getGuest())
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [birth, setBirth] = useState('')
+  const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  async function go() {
-    setBusy(true); setErr('')
-    const { error } = await supabase!.rpc('book_appointment', {
-      p_service: service.id, p_length: draft.length ?? null, p_starts_at: draft.slot, p_note: draft.note ?? null,
+
+  async function go(e: React.FormEvent) {
+    e.preventDefault(); setErr('')
+    let birthIso: string | null = null
+    if (!guest) {
+      if (name.trim().split(/\s+/).length < 2) return setErr('Escreva seu nome e sobrenome.')
+      if (![10, 11].includes(onlyDigits(phone).length)) return setErr('Confira o celular com DDD. Ex.: (11) 91234-5678')
+      birthIso = parseBirth(birth)
+      if (!birthIso) return setErr('Confira a data de nascimento. Ex.: 25/03/1970')
+      if (!consent) return setErr('Marque a caixinha de autorização para continuar.')
+    }
+    setBusy(true)
+    const { data, error } = await supabase!.rpc('book_as_guest', {
+      p_name: guest ? null : name.trim(), p_phone: guest ? null : phone, p_birth: birthIso,
+      p_service: service.id, p_length: draft.length ?? null, p_starts_at: draft.slot,
+      p_note: draft.note ?? null, p_consent: guest ? false : consent, p_token: guest?.token ?? null,
     })
     setBusy(false)
     if (error) {
       setErr(friendlyError(error))
-      if (error.message.includes('slot_unavailable')) setTimeout(onTaken, 2200)
+      if (error.message.includes('slot_unavailable')) setTimeout(onTaken, 2500)
       return
     }
-    onDone()
+    const r = data as { token: string | null; first_name: string }
+    if (r.token) saveGuest({ token: r.token, first_name: r.first_name, full_name: guest?.full_name ?? name.trim(), phone: guest?.phone ?? phone })
+    onDone(r.first_name)
   }
+
   return (
-    <div className="panel p-6 sm:p-8">
-      <p className="kicker">Tudo certo, {profile?.full_name.split(' ')[0]}</p>
-      <p className="mt-4 font-display text-3xl leading-tight">Ao solicitar, seu horário fica reservado e a Laís confirma em seguida.</p>
-      <ul className="mt-6 space-y-2 text-sm text-espresso/65">
-        <li className="flex gap-2"><Check className="mt-0.5 shrink-0 text-bronze" /> Você acompanha o status em “Minha conta”.</li>
-        <li className="flex gap-2"><Check className="mt-0.5 shrink-0 text-bronze" /> Precisa desmarcar? Cancele pela sua conta.</li>
-      </ul>
-      {err && <p role="alert" className="mt-6 text-sm text-erro">{err}</p>}
-      <button onClick={go} disabled={busy} className="btn-dark mt-8 w-full">{busy ? 'Enviando…' : 'Solicitar agendamento'}</button>
-    </div>
+    <form onSubmit={go} className="panel space-y-5 p-5 sm:p-8" noValidate>
+      {guest ? (
+        <div className="flex items-center justify-between gap-3 bg-linho p-4">
+          <p className="text-[1.05rem]">Agendando como <strong className="font-semibold">{guest.full_name ?? guest.first_name}</strong></p>
+          <button type="button" onClick={() => { clearGuest(); setGuest(null) }} className="min-h-11 shrink-0 text-[0.85rem] underline">Não sou eu</button>
+        </div>
+      ) : (
+        <>
+          <h2 className="text-[1.8rem] leading-tight">Seus dados</h2>
+          <p className="-mt-3 text-[0.95rem] text-espresso/65">Sem cadastro e sem senha. Só para a Laís confirmar com você.</p>
+          <div><label className="label" htmlFor="g-name">Nome e sobrenome</label>
+            <input id="g-name" className="field-box !py-3 !text-[1.05rem]" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></div>
+          <div><label className="label" htmlFor="g-phone">Celular (WhatsApp)</label>
+            <input id="g-phone" className="field-box !py-3 !text-[1.05rem]" inputMode="tel" autoComplete="tel" placeholder="(11) 91234-5678" value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} /></div>
+          <div><label className="label" htmlFor="g-birth">Data de nascimento</label>
+            <input id="g-birth" className="field-box !py-3 !text-[1.05rem]" inputMode="numeric" placeholder="dia/mês/ano" value={birth} onChange={(e) => setBirth(maskBirth(e.target.value))} />
+            <p className="mt-1 text-[0.8rem] text-espresso/55">Serve para você ver seus horários depois, em qualquer celular.</p></div>
+        </>
+      )}
+      <div><label className="label" htmlFor="note">Recado para a Laís (se quiser)</label>
+        <textarea id="note" rows={2} maxLength={500} className="field-box !text-[1rem]" placeholder="Ex.: tenho alergia a…" value={draft.note ?? ''} onChange={(e) => onNote(e.target.value)} /></div>
+      {!guest && (
+        <label className="flex cursor-pointer gap-3 text-[0.95rem] leading-relaxed text-espresso/80">
+          <input type="checkbox" className="mt-1 h-6 w-6 shrink-0 accent-[#2b1f19]" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+          <span>Autorizo o studio a guardar meus dados para os atendimentos (<Link to="/privacidade" target="_blank" className="underline">privacidade</Link>).</span>
+        </label>
+      )}
+      {err && <p role="alert" className="bg-erro/10 p-3 text-[0.95rem] text-erro">{err}</p>}
+      <button disabled={busy} className="btn-dark w-full text-[0.95rem]">{busy ? 'Enviando…' : <><Check /> Confirmar agendamento</>}</button>
+      <p className="text-center text-[0.85rem] text-espresso/55">A Laís confirma seu horário pelo WhatsApp.</p>
+    </form>
   )
 }
 
-function Success({ onAgain }: { onAgain: () => void }) {
+function Success({ name, onAgain }: { name: string; onAgain: () => void }) {
   const { settings } = useSiteData()
   return (
-    <section className="mx-auto flex min-h-[85vh] max-w-3xl flex-col justify-center px-5 pt-28 sm:px-8 [animation:fade_.6s_ease]">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-espresso text-marfim"><Check width={26} height={26} /></span>
-      <h1 className="mt-8 text-[clamp(3rem,7vw,5rem)] leading-[0.95]">Pedido enviado. <em className="text-cacau">Até breve!</em></h1>
-      <p className="mt-6 max-w-lg leading-relaxed text-espresso/70">Seu horário está reservado e aguardando a confirmação da Laís. Você pode acompanhar tudo na sua conta.</p>
-      <div className="mt-10 flex flex-wrap gap-4">
-        <Link to="/conta" className="btn-dark">Ver meus agendamentos</Link>
-        <a href={contactLink(settings.contact, 'Olá! Acabei de solicitar um agendamento pelo site.')} target="_blank" rel="noopener noreferrer" className="btn-line"><Whats /> Falar com o studio</a>
-        <button onClick={onAgain} className="btn-ghost">Agendar outro serviço</button>
+    <section className="mx-auto flex min-h-[85vh] max-w-3xl flex-col justify-center px-5 pb-10 pt-24 sm:px-8 [animation:fade_.6s_ease]">
+      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-espresso text-marfim"><Check width={30} height={30} /></span>
+      <h1 className="mt-6 text-[clamp(2.6rem,7vw,5rem)] leading-[0.95]">Pedido enviado{name ? `, ${name}` : ''}!</h1>
+      <p className="mt-5 max-w-lg text-[1.1rem] leading-relaxed text-espresso/75">Seu horário está reservado. A Laís vai confirmar com você pelo WhatsApp.</p>
+      <div className="mt-8 grid gap-3 sm:flex">
+        <Link to="/meus-horarios" className="btn-dark">Ver meus horários</Link>
+        <a href={contactLink(settings.contact, 'Olá! Acabei de fazer um agendamento pelo site.')} target="_blank" rel="noopener noreferrer" className="btn-line"><Whats /> Falar com o studio</a>
+        <button onClick={onAgain} className="btn-ghost min-h-12 justify-center">Agendar outro serviço</button>
       </div>
     </section>
   )

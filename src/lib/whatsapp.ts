@@ -12,7 +12,8 @@ function waLink(raw: string): string | null {
     } catch { return null }
   }
   const d = onlyDigits(v)
-  if (d.length >= 10 && d.length <= 13) return `https://wa.me/${d.startsWith('55') ? d : `55${d}`}`
+  const local = /^55\d{10,11}$/.test(d) ? d.slice(2) : d
+  if (local.length === 10 || local.length === 11) return `https://wa.me/55${local}`
   return null
 }
 
@@ -26,3 +27,12 @@ export function contactLink(c: ContactSettings, message = 'Olá! Vim pelo site d
 }
 
 export const hasWhatsapp = (c: ContactSettings) => waLink(c.whatsapp) !== null
+
+/** Abre conversa no WhatsApp com uma cliente (número dela) já com a mensagem. */
+export function waClient(phone: string | null | undefined, message: string) {
+  const d = onlyDigits(phone || '')
+  // mesma regra do banco: só tira o 55 se for código do país (12–13 dígitos)
+  const local = /^55\d{10,11}$/.test(d) ? d.slice(2) : d
+  if (local.length < 10 || local.length > 11) return null
+  return `https://wa.me/55${local}?text=${encodeURIComponent(message)}`
+}

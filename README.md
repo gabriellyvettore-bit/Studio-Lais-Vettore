@@ -2,8 +2,8 @@
 
 Site do **Studio Lais Vettore** (Rua Jacareí, 128 — Vila Rosália, Guarulhos/SP · [@studiolaisvettore](https://instagram.com/studiolaisvettore)).
 
-- **Clientes**: veem serviços e preços (por comprimento de cabelo), galeria e dia da noiva; criam conta (Google ou link no e-mail, sem senha) e **agendam sozinhas** nos horários livres. Acompanham agendamentos e histórico, podem cancelar, baixar ou excluir seus dados (LGPD).
-- **Laís (admin)**: painel com **calendário completo** (dia/semana/mês), aprovação de pedidos, agendamentos manuais (inclusive procedimentos fora da lista), **ficha técnica** e histórico de cada cliente com fotos, serviços/preços/promoções, horários e dias especiais, galeria e textos do site.
+- **Clientes**: veem serviços e preços (por comprimento de cabelo) e fotos, e **agendam sem cadastro** — só nome, celular e data de nascimento. O celular fica lembrado no aparelho; em “Meus horários” acompanham e cancelam pedidos, veem o histórico e podem baixar ou excluir seus dados (LGPD).
+- **Laís e Gabi (admin, conta studiolaisvettore@gmail.com)**: painel pensado para o celular, com **calendário completo** (dia/semana/mês), pedidos com Confirmar / Editar / Recusar e aviso pelo WhatsApp, convite para clientes cadastradas pelo studio, agendamentos manuais (inclusive procedimentos fora da lista), **ficha técnica** e histórico de cada cliente com fotos, serviços/preços/promoções, horários e dias especiais, galeria e textos do site.
 
 ## Tecnologia
 | Parte | Ferramenta |

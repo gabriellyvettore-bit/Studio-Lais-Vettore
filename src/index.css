@@ -26,10 +26,12 @@
 
 @layer base {
   html {
+    font-size: 17px; /* celular: letra um pouco maior, mais fácil de ler */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     scroll-behavior: smooth;
   }
+  @media (min-width: 1024px) { html { font-size: 16px; } }
   body {
     @apply bg-marfim text-espresso font-sans;
     font-feature-settings: "ss01";
@@ -56,7 +58,7 @@
   @apply h-px w-full bg-espresso/15;
 }
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 px-6 py-3.5 text-[0.78rem] font-semibold uppercase tracking-[0.18em] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-40;
+  @apply inline-flex min-h-[52px] items-center justify-center gap-2 px-6 py-3.5 text-[0.8rem] font-semibold uppercase tracking-[0.18em] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-40;
 }
 @utility btn-dark {
   @apply btn bg-espresso text-marfim hover:bg-cacau;

@@ -1,51 +1,23 @@
 import { useSiteData } from '../context/SiteData'
-import { PageHeader } from '../components/PageHeader'
-import { Instagram, Phone, Pin, Whats } from '../components/Icons'
-import { contactLink, hasWhatsapp } from '../lib/whatsapp'
-import { Link } from 'react-router-dom'
-
-export function VisitSection() {
-  const { settings } = useSiteData()
-  const c = settings.contact
-  const q = encodeURIComponent(`${c.address.replace('—', '-')}, ${c.city.replace('—', '-')}`)
-  return (
-    <section className="mx-auto grid max-w-[1320px] gap-10 px-5 py-24 sm:px-8 lg:grid-cols-12 lg:py-32">
-      <div className="lg:col-span-5">
-        <p className="kicker">Visite o studio</p>
-        <h2 className="mt-5 text-[clamp(2.4rem,5vw,4rem)] leading-none">Vila Rosália,<br /><em className="text-cacau">Guarulhos.</em></h2>
-        <ul className="mt-10 space-y-5 text-[0.98rem]">
-          <li className="flex gap-3"><Pin className="mt-1 shrink-0 text-bronze" /><a href={c.maps_url} target="_blank" rel="noopener noreferrer" className="hover:underline">{c.address}<br />{c.city} · CEP {c.cep}</a></li>
-          {c.phone && <li className="flex gap-3"><Phone className="mt-0.5 shrink-0 text-bronze" /><a href={`tel:+55${c.phone.replace(/\D/g, '')}`} className="hover:underline">{c.phone}</a></li>}
-          <li className="flex gap-3"><Instagram className="mt-0.5 shrink-0 text-bronze" /><a href={`https://instagram.com/${c.instagram}`} target="_blank" rel="noopener noreferrer" className="hover:underline">@{c.instagram}</a></li>
-        </ul>
-        <div className="mt-10 grid max-w-sm grid-cols-[auto_1fr] gap-x-8 gap-y-2 border-t border-espresso/15 pt-6 text-sm">
-          <span className="text-espresso/55">Terça a sábado</span><span>9h às 16h (início)</span>
-          <span className="text-espresso/55">Domingo e segunda</span><span>Fechado</span>
-        </div>
-        <div className="mt-10 grid gap-3 sm:flex sm:flex-wrap sm:gap-4">
-          <a href={contactLink(c)} target="_blank" rel="noopener noreferrer" className="btn-dark w-full sm:w-auto"><Whats /> {hasWhatsapp(c) ? 'Chamar no WhatsApp' : 'Enviar mensagem'}</a>
-          <Link to="/agendar" className="btn-line w-full sm:w-auto">Agendar online</Link>
-        </div>
-      </div>
-      <div className="min-h-[380px] overflow-hidden border border-espresso/10 grayscale-[.6] sepia-[.15] lg:col-span-7">
-        <iframe title="Mapa do Studio Lais Vettore" className="h-full min-h-[380px] w-full" loading="lazy" referrerPolicy="no-referrer-when-downgrade"
-          src={`https://www.google.com/maps?q=${q}&output=embed`} />
-      </div>
-    </section>
-  )
-}
+import { Clock, Instagram, Phone, Pin, Whats } from '../components/Icons'
+import { contactLink } from '../lib/whatsapp'
 
 export default function Contato() {
   const { settings } = useSiteData()
+  const c = settings.contact
+  const Row = ({ icon: I, children }: { icon: typeof Pin; children: React.ReactNode }) => (
+    <li className="flex gap-4 border-b border-espresso/10 py-5"><I width={24} height={24} className="mt-0.5 shrink-0 text-cacau" /><div className="text-[1.05rem]">{children}</div></li>
+  )
   return (
-    <>
-      <PageHeader kicker="Contato" title={<>Vamos conversar <em className="text-cacau">sobre o seu cabelo?</em></>}>
-        Procedimentos que não estão no agendamento online — mega hair, maquiagem, dia da noiva, corte sem escova e outros — são combinados direto com a Laís.
-        <div className="mt-8">
-          <a href={contactLink(settings.contact, 'Olá! Gostaria de saber sobre um procedimento que não encontrei no site.')} target="_blank" rel="noopener noreferrer" className="btn-dark"><Whats /> Falar com a Laís</a>
-        </div>
-      </PageHeader>
-      <VisitSection />
-    </>
+    <section className="mx-auto max-w-2xl px-5 pb-16 pt-28 sm:px-8 sm:pt-36">
+      <h1 className="text-[2.6rem] leading-none">Endereço e contato</h1>
+      <ul className="mt-6">
+        <Row icon={Pin}>{c.address}<br />{c.city} · CEP {c.cep}<a href={c.maps_url} target="_blank" rel="noopener noreferrer" className="btn-line mt-3 w-full">Abrir no mapa</a></Row>
+        <Row icon={Clock}>Terça a sábado, das 9h às 16h<br /><span className="text-espresso/60">Domingo e segunda: fechado</span></Row>
+        <Row icon={Whats}>WhatsApp<a href={contactLink(c)} target="_blank" rel="noopener noreferrer" className="btn-dark mt-3 w-full"><Whats /> Chamar no WhatsApp</a></Row>
+        {c.phone && <Row icon={Phone}><a href={`tel:+55${c.phone.replace(/\D/g, '')}`} className="underline underline-offset-4">{c.phone}</a></Row>}
+        <Row icon={Instagram}><a href={`https://instagram.com/${c.instagram}`} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">@{c.instagram}</a></Row>
+      </ul>
+    </section>
   )
 }

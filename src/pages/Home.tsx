@@ -1,182 +1,114 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSiteData } from '../context/SiteData'
 import { Img } from '../components/Img'
-import { Reveal } from '../components/Reveal'
-import { Arrow, Pin } from '../components/Icons'
-import { TESTIMONIALS } from '../lib/defaults'
-import { durationLabel, priceSummary } from '../lib/format'
-import { VisitSection } from './Contato'
+import { Arrow, Calendar, Clock, Image, Pin, Scissors, Whats } from '../components/Icons'
+import { priceSummary } from '../lib/format'
+import { contactLink } from '../lib/whatsapp'
 
 export default function Home() {
   const { settings, services, gallery } = useSiteData()
   const h = settings.home
-  const pick = (i: number) => gallery[i % Math.max(gallery.length, 1)]?.image_url ?? 'img/galeria/loiro-quente.webp'
-  const [t, setT] = useState(0)
+  const c = settings.contact
+  const photos = gallery.slice(1, 9)
+  const hero = gallery[0]?.image_url ?? 'img/galeria/loiro-quente.webp'
 
   return (
     <>
-      {/* HERO */}
-      <section className="relative h-[100svh] min-h-[620px] overflow-hidden bg-espresso text-marfim">
-        <div className="absolute inset-0 lg:left-[38%]">
-          <Img src={pick(0)} alt="Cliente com loiro iluminado feito no Studio Lais Vettore" loading="eager" fetchPriority="high" className="object-[50%_15%]" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--color-espresso)_0%,var(--color-espresso)_38%,rgba(43,31,25,.55)_62%,rgba(43,31,25,.15)_80%,rgba(43,31,25,.45)_100%)] lg:bg-gradient-to-r lg:from-espresso lg:via-espresso/10 lg:to-transparent" />
+      {/* TOPO: quem somos + botão principal */}
+      <section className="relative overflow-hidden bg-espresso text-marfim">
+        <div className="absolute inset-0 lg:left-[40%]">
+          <Img src={hero} alt="Cabelo feito no Studio Lais Vettore" loading="eager" fetchPriority="high" className="object-[50%_15%]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--color-espresso)_0%,var(--color-espresso)_35%,rgba(43,31,25,.5)_65%,rgba(43,31,25,.35)_100%)] lg:bg-gradient-to-r lg:from-espresso lg:via-espresso/20 lg:to-transparent" />
         </div>
-        <div className="relative mx-auto flex h-full max-w-[1320px] flex-col justify-end px-5 pb-14 sm:px-8 lg:justify-center lg:pb-0">
+        <div className="relative mx-auto flex min-h-[78svh] max-w-[1320px] flex-col justify-end px-5 pb-10 pt-28 sm:px-8 lg:min-h-[640px] lg:justify-center lg:pb-16">
           <p className="kicker !text-bronze-claro">{h.hero_kicker}</p>
-          <h1 className="mt-6 max-w-[11ch] text-[clamp(3.4rem,9vw,8.5rem)] leading-[0.88]">
+          <h1 className="mt-4 max-w-[12ch] text-[clamp(3rem,9vw,7rem)] leading-[0.9]">
             {h.hero_title.split(' ').map((w, i, a) => i === a.length - 1 ? <em key={i} className="text-areia">{w}</em> : <span key={i}>{w} </span>)}
           </h1>
-          <p className="mt-8 max-w-md text-[1.02rem] leading-relaxed text-marfim/80">{h.hero_text}</p>
-          <div className="mt-10 flex flex-wrap items-center gap-6">
-            <Link to="/agendar" className="btn-light">Agendar horário <Arrow /></Link>
-            <Link to="/servicos" className="btn-ghost !text-marfim decoration-areia/50">Ver serviços e preços</Link>
+          <p className="mt-5 max-w-md text-[1.05rem] leading-relaxed text-marfim/85">Agende seu horário em poucos toques, sem cadastro.</p>
+          <div className="mt-8 grid gap-3 sm:flex">
+            <Link to="/agendar" className="btn-light text-[0.9rem]"><Calendar width={20} height={20} /> Agendar horário</Link>
+            <Link to="/servicos" className="btn border border-marfim/40 text-marfim hover:bg-marfim/10">Ver preços</Link>
           </div>
-        </div>
-        <div className="absolute bottom-6 right-24 hidden items-center gap-3 text-[0.68rem] uppercase tracking-[0.3em] text-marfim/60 lg:flex">
-          <Pin /> Vila Rosália · Guarulhos
         </div>
       </section>
 
-      {/* ESPECIALIDADES */}
-      <div className="border-b border-espresso/10 bg-linho">
-        <div className="no-scrollbar mx-auto flex max-w-[1320px] gap-10 overflow-x-auto whitespace-nowrap px-5 py-6 font-display text-2xl italic text-cacau sm:px-8 lg:justify-between">
-          {['Loiros', 'Morenas iluminadas', 'Mega hair', 'Cachos', 'Penteados', 'Dia da noiva'].map((s, i) => (
-            <span key={s} className="flex items-center gap-10">{s}{i < 5 && <span className="text-sm not-italic text-bronze">✦</span>}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* SOBRE */}
-      <section className="mx-auto grid max-w-[1320px] gap-12 px-5 py-24 sm:px-8 lg:grid-cols-12 lg:gap-8 lg:py-36">
-        <Reveal className="relative lg:col-span-5">
-          <div className="aspect-[4/5] overflow-hidden"><Img src="img/galeria/atendimento-lais.webp" alt="Laís Vettore finalizando o cabelo de uma cliente" /></div>
-          <div className="absolute -bottom-8 -right-4 hidden w-40 border-[6px] border-marfim sm:block lg:-right-16 lg:w-52">
-            <div className="aspect-[4/5]"><Img src={pick(2)} alt="" /></div>
-          </div>
-        </Reveal>
-        <Reveal className="flex flex-col justify-center lg:col-span-6 lg:col-start-7" delay={120}>
-          <p className="kicker">{h.about_title}</p>
-          <h2 className="mt-6 text-[clamp(2.4rem,5vw,4.2rem)] leading-[1]">Um cabelo que <em className="text-cacau">conversa</em> com a sua história.</h2>
-          <p className="mt-8 max-w-lg text-[1.02rem] leading-[1.8] text-espresso/75">{h.about_text}</p>
-          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-espresso/15 pt-8">
-            {[['5.0', 'avaliação das noivas'], ['16', 'madrinhas por evento'], ['4 mil+', 'seguidoras no Instagram']].map(([n, l]) => (
-              <div key={l}><dt className="font-display text-4xl">{n}</dt><dd className="mt-1 text-[0.72rem] uppercase leading-snug tracking-[0.12em] text-espresso/55">{l}</dd></div>
-            ))}
-          </dl>
-        </Reveal>
-      </section>
+      {/* ATALHOS */}
+      <nav aria-label="Atalhos" className="mx-auto grid max-w-[1320px] grid-cols-2 gap-3 px-5 py-6 sm:grid-cols-4 sm:px-8">
+        {[
+          { to: '/agendar', icon: Calendar, label: 'Agendar' },
+          { to: '/servicos', icon: Scissors, label: 'Preços' },
+          { href: contactLink(c), icon: Whats, label: 'WhatsApp' },
+          { href: c.maps_url, icon: Pin, label: 'Como chegar' },
+        ].map(({ to, href, icon: I, label }) => {
+          const cls = 'panel flex min-h-24 flex-col items-center justify-center gap-2 p-3 text-center text-[0.95rem] font-medium transition active:bg-areia hover:border-espresso/40'
+          return to
+            ? <Link key={label} to={to} className={cls}><I width={26} height={26} className="text-cacau" />{label}</Link>
+            : <a key={label} href={href} target="_blank" rel="noopener noreferrer" className={cls}><I width={26} height={26} className="text-cacau" />{label}</a>
+        })}
+      </nav>
 
       {/* SERVIÇOS */}
-      <section className="bg-linho">
-        <div className="mx-auto max-w-[1320px] px-5 py-24 sm:px-8 lg:py-32">
-          <div className="flex flex-wrap items-end justify-between gap-6">
+      <section className="mx-auto max-w-[1320px] px-5 py-8 sm:px-8 lg:py-14">
+        <div className="flex items-end justify-between gap-4">
+          <h2 className="text-[2.2rem] leading-none sm:text-5xl">Serviços</h2>
+          <Link to="/servicos" className="btn-ghost min-h-11 !text-[0.72rem]">Todos os preços <Arrow /></Link>
+        </div>
+        <ul className="mt-6 divide-y divide-espresso/10 border-y border-espresso/15">
+          {services.map((s) => {
+            const p = priceSummary(s)
+            return (
+              <li key={s.id}>
+                <Link to={`/agendar?servico=${s.id}`} className="flex min-h-[68px] items-center justify-between gap-4 py-3 active:bg-areia/50">
+                  <span className="font-display text-[1.6rem] leading-tight">{s.name}</span>
+                  <span className="flex shrink-0 items-center gap-2 text-right">
+                    <span className="text-[0.95rem]">{p.promo && <span className="mr-1 text-[0.65rem] font-semibold uppercase tracking-wider text-bronze-texto">Promo</span>}{p.label}</span>
+                    <Arrow className="text-bronze" />
+                  </span>
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+        <p className="mt-4 text-[0.95rem] text-espresso/65">Mega hair, maquiagem e outros: <a href={contactLink(c, 'Olá! Gostaria de saber sobre um procedimento que não está no site.')} target="_blank" rel="noopener noreferrer" className="underline decoration-bronze underline-offset-4">fale com a gente no WhatsApp</a>.</p>
+      </section>
+
+      {/* FOTOS (deslizar para o lado) */}
+      <section className="py-8 lg:py-14">
+        <div className="mx-auto flex max-w-[1320px] items-end justify-between gap-4 px-5 sm:px-8">
+          <h2 className="text-[2.2rem] leading-none sm:text-5xl">Fotos</h2>
+          <Link to="/galeria" className="btn-ghost min-h-11 !text-[0.72rem]"><Image /> Ver todas</Link>
+        </div>
+        <div className="no-scrollbar mx-auto mt-6 flex max-w-[1320px] snap-x snap-mandatory gap-3 overflow-x-auto px-5 sm:px-8">
+          {photos.map((g) => (
+            <Link key={g.id} to="/galeria" className="aspect-[4/5] w-[62vw] max-w-[300px] shrink-0 snap-start overflow-hidden">
+              <Img src={g.image_url} alt={g.caption ?? 'Trabalho do studio'} />
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ONDE E QUANDO */}
+      <section className="mx-auto max-w-[1320px] px-5 pb-12 pt-6 sm:px-8 lg:pb-20">
+        <div className="panel grid gap-6 p-5 sm:grid-cols-2 sm:p-8">
+          <div className="flex gap-3">
+            <Pin width={24} height={24} className="mt-1 shrink-0 text-cacau" />
             <div>
-              <p className="kicker">Serviços</p>
-              <h2 className="mt-5 text-[clamp(2.4rem,5vw,4.2rem)] leading-none">O cardápio do studio</h2>
+              <p className="font-display text-2xl leading-tight">{c.address}</p>
+              <p className="text-espresso/70">{c.city}</p>
+              <a href={c.maps_url} target="_blank" rel="noopener noreferrer" className="btn-line mt-4 w-full sm:w-auto">Abrir no mapa</a>
             </div>
-            <Link to="/servicos" className="btn-ghost">Tabela completa <Arrow /></Link>
           </div>
-          <ul className="mt-14 border-t border-espresso/15">
-            {services.slice(0, 6).map((s, i) => {
-              const p = priceSummary(s)
-              return (
-                <Reveal as="li" key={s.id} delay={i * 50}>
-                  <Link to={`/agendar?servico=${s.id}`} className="group grid grid-cols-[2.5rem_1fr] items-baseline gap-x-4 border-b border-espresso/15 py-7 transition sm:grid-cols-[4rem_1fr_7rem_13rem]">
-                    <span className="text-xs font-semibold text-bronze">{String(i + 1).padStart(2, '0')}</span>
-                    <span>
-                      <span className="font-display text-[1.9rem] leading-none transition group-hover:italic sm:text-[2.4rem]">{s.name}</span>
-                      <span className="mt-2 block max-w-md text-sm text-espresso/60">{s.description}</span>
-                    </span>
-                    <span className="hidden text-sm text-espresso/55 sm:block">{durationLabel(s.duration_min)}</span>
-                    <span className="col-start-2 mt-3 sm:col-start-auto sm:mt-0 sm:text-right">
-                      {p.promo && <span className="mb-1 block text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-bronze">Promoção</span>}
-                      <span className="whitespace-nowrap font-display text-xl sm:text-2xl">{p.label}</span>
-                    </span>
-                  </Link>
-                </Reveal>
-              )
-            })}
-          </ul>
-          <p className="mt-8 text-sm text-espresso/60">Mega hair, maquiagem, dia da noiva e outros procedimentos: <Link to="/contato" className="underline decoration-bronze underline-offset-4">fale com a gente</Link>.</p>
-        </div>
-      </section>
-
-      {/* GALERIA */}
-      <section className="mx-auto max-w-[1320px] px-5 py-24 sm:px-8 lg:py-32">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div>
-            <p className="kicker">Galeria</p>
-            <h2 className="mt-5 text-[clamp(2.4rem,5vw,4.2rem)] leading-none">Feito aqui</h2>
+          <div className="flex gap-3">
+            <Clock width={24} height={24} className="mt-1 shrink-0 text-cacau" />
+            <div>
+              <p className="font-display text-2xl leading-tight">Terça a sábado</p>
+              <p className="text-espresso/70">Horários das 9h às 16h</p>
+              <a href={contactLink(c)} target="_blank" rel="noopener noreferrer" className="btn-line mt-4 w-full sm:w-auto"><Whats /> Tirar dúvidas</a>
+            </div>
           </div>
-          <Link to="/galeria" className="btn-ghost">Ver todas <Arrow /></Link>
-        </div>
-        <div className="mt-14 grid grid-cols-2 gap-3 sm:gap-4 lg:auto-rows-[310px] lg:grid-cols-12">
-          {[
-            ['lg:col-span-5 lg:row-span-2 aspect-[4/5] lg:aspect-auto', 1],
-            ['lg:col-span-4 aspect-square lg:aspect-auto', 3],
-            ['lg:col-span-3 aspect-square lg:aspect-auto', 4],
-            ['lg:col-span-3 aspect-square lg:aspect-auto', 5],
-            ['lg:col-span-4 aspect-square lg:aspect-auto', 6],
-          ].map(([cls, i], k) => (
-            <Reveal key={k} delay={k * 70} className={`${cls} ${k === 0 ? 'col-span-2' : ''} overflow-hidden`}>
-              <Img src={pick(i as number)} alt={gallery[(i as number) % gallery.length]?.caption ?? 'Trabalho do studio'} className="transition duration-[1.4s] ease-[var(--ease-suave)] hover:scale-[1.04]" />
-            </Reveal>
-          ))}
         </div>
       </section>
-
-      {/* NOIVAS */}
-      <section className="grain relative overflow-hidden bg-espresso text-marfim">
-        <div className="mx-auto grid max-w-[1320px] items-center gap-12 px-5 py-24 sm:px-8 lg:grid-cols-2 lg:py-0">
-          <Reveal className="order-2 lg:order-1 lg:py-32">
-            <p className="kicker !text-bronze-claro">Dia da noiva</p>
-            <h2 className="mt-6 text-[clamp(2.6rem,5.5vw,4.8rem)] leading-[0.95]">O sim merece <em className="text-areia">calma</em>, cuidado e um espelho só seu.</h2>
-            <p className="mt-8 max-w-md leading-relaxed text-marfim/75">{h.bride_text}</p>
-            <Link to="/noivas" className="btn-light mt-10">Conhecer o dia da noiva</Link>
-          </Reveal>
-          <Reveal className="order-1 aspect-[4/5] overflow-hidden lg:order-2 lg:h-[760px] lg:aspect-auto" delay={150}>
-            <Img src="img/galeria/noiva-coque.webp" alt="Coque de noiva com orquídeas feito no studio" />
-          </Reveal>
-        </div>
-      </section>
-
-      {/* DEPOIMENTOS */}
-      <section className="mx-auto max-w-[1100px] px-5 py-24 text-center sm:px-8 lg:py-32">
-        <p className="kicker">Quem já sentou na nossa cadeira</p>
-        <blockquote key={t} className="mx-auto mt-10 max-w-3xl font-display text-[clamp(1.8rem,3.6vw,2.9rem)] leading-[1.2] [animation:fade_.7s_ease]">
-          “{TESTIMONIALS[t].text}”
-        </blockquote>
-        <p className="mt-8 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-cacau">{TESTIMONIALS[t].name} · avaliação 5 estrelas</p>
-        <div className="mt-8 flex justify-center gap-3">
-          {TESTIMONIALS.map((x, i) => (
-            <button key={x.name} onClick={() => setT(i)} aria-label={`Depoimento de ${x.name}`}
-              className={`h-11 bg-clip-content py-5 transition-all ${i === t ? 'w-10 bg-espresso' : 'w-5 bg-espresso/20 hover:bg-espresso/40'}`} />
-          ))}
-        </div>
-      </section>
-
-      {/* COMO FUNCIONA */}
-      <section className="border-y border-espresso/10 bg-linho">
-        <div className="mx-auto grid max-w-[1320px] gap-12 px-5 py-20 sm:px-8 lg:grid-cols-4">
-          <div>
-            <p className="kicker">Agendamento online</p>
-            <h2 className="mt-5 text-4xl leading-none">Simples assim.</h2>
-          </div>
-          {[
-            ['Escolha', 'o serviço e o comprimento do seu cabelo — o valor aparece na hora.'],
-            ['Reserve', 'um dos horários livres da agenda, a qualquer hora do dia.'],
-            ['Pronto', 'a Laís confirma seu horário e você acompanha tudo pela sua conta.'],
-          ].map(([a, b], i) => (
-            <Reveal key={a} delay={i * 100}>
-              <span className="font-display text-6xl text-bronze/60">{i + 1}</span>
-              <p className="mt-3 leading-relaxed text-espresso/70"><strong className="font-display text-2xl font-normal text-espresso">{a}</strong> {b}</p>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      <VisitSection />
     </>
   )
 }

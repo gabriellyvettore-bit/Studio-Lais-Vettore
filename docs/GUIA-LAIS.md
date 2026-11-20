@@ -4,8 +4,14 @@ As duas usam a mesma conta: `studiolaisvettore@gmail.com`.
 
 Acesse pelo rodapé do site → **Área do studio** (ou `…/#/admin`). Entre com o Google usando a conta do studio — o painel abre direto.
 
+## Como as clientes agendam
+Sem cadastro: escolhem o serviço, o tamanho do cabelo, o dia e o horário e digitam **nome, celular e data de nascimento**. O pedido chega para você como **pedido novo**. Depois, a cliente acompanha em **Meus horários** (o celular dela fica lembrado; em outro aparelho, entra com celular + nascimento).
+
 ## Painel (início)
-Resumo do dia, pedidos **aguardando aprovação** (botões *Confirmar* / *Recusar*) e os serviços mais procurados do mês.
+- **Pedidos novos**: cada um tem **Confirmar**, **Editar** (mudar dia, hora, serviço, valor — depois de conversar com a cliente) e **Recusar**. O ícone do WhatsApp abre a conversa com a cliente.
+- Ao confirmar, aparece **Avisar no WhatsApp**: abre a conversa já com a mensagem de confirmação escrita.
+- **Hoje**: atendimentos do dia; toque para abrir/editar.
+- No celular, use a barra de baixo: **Início, Agenda, Clientes, Mais**.
 
 ## Agenda
 - Veja por **dia, semana ou mês** e navegue pelas próximas semanas com as setas.
@@ -17,13 +23,15 @@ Resumo do dia, pedidos **aguardando aprovação** (botões *Confirmar* / *Recusa
 - A agenda avisa se houver outro horário no mesmo período, mas deixa você salvar.
 
 ## Clientes
+- Ao cadastrar uma cliente (nome + celular), ela fica **aguardando confirmação**. Toque em **Enviar convite**: abre o WhatsApp com um link; a cliente toca, digita a data de nascimento e confirma. Você já pode marcar horários para ela enquanto isso. Só a própria cliente consegue confirmar o cadastro.
 - Busque por nome ou telefone. Na ficha você pode:
   - **trocar a foto** da cliente (toque na foto);
   - **editar** nome, telefone, e-mail, nascimento;
   - preencher a **ficha técnica** (tipo de cabelo, alergias, histórico químico, observações) — só você vê;
   - **adicionar / editar / excluir procedimentos realizados**, com fórmula, produtos, valor e fotos de antes/depois (privadas);
   - escrever um **recado para a cliente** (ela vê no histórico dela);
-  - **unir cadastros duplicados** (ex.: cadastrou pelo WhatsApp e depois ela criou conta).
+  - **unir cadastros duplicados**.
+- **Aviso “dados não conferem”** num pedido: alguém usou o celular de uma cliente com outro nome/nascimento. Confirme pelo WhatsApp antes. Se perceber que o celular foi cadastrado pela pessoa errada, use **Resetar acesso** na ficha **antes** de preencher ficha técnica e histórico, e envie o novo convite para a cliente certa.
 - A cliente **não consegue alterar** procedimentos feitos — só você.
 
 ## Serviços e preços

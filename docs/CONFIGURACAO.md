@@ -18,20 +18,11 @@ Tempo estimado: 30 a 40 minutos, uma única vez.
    **Nunca** use nem divulgue a `service_role` key.
 4. A URL e a chave *publishable* ficam em `.env.production` (são públicas). Projeto atual: `bwfawuenigptmqdfrzjj`.
 
-## 3. Login (Supabase → Authentication)
-1. *URL Configuration*:
-   - **Site URL**: `https://gabriellyvettore-bit.github.io/Studio-Lais-Vettore/`
-   - **Redirect URLs**: a mesma URL acima (e `http://localhost:5173/Studio-Lais-Vettore/` para testes).
-2. *Providers → Email*: deixe ativo (“magic link”) — é por onde entram as clientes sem conta Google.
-   Para os e-mails chegarem às clientes, configure o envio pelo Gmail do studio em *Authentication → Emails → SMTP Settings*:
-   host `smtp.gmail.com`, porta `465`, usuário e remetente `studiolaisvettore@gmail.com`, senha = **senha de app** do Google
-   (myaccount.google.com/apppasswords; exige verificação em duas etapas na conta).
-3. *Providers → Google*:
-   1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto → *APIs e serviços → Tela de consentimento OAuth* (tipo Externo, nome “Studio Lais Vettore”).
-   2. *Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web*.
-   3. Em *URIs de redirecionamento autorizados*, cole a **Callback URL** mostrada pelo Supabase na tela do provedor Google (`https://<projeto>.supabase.co/auth/v1/callback`).
-   4. Copie *Client ID* e *Client Secret* para o Supabase e salve.
-5. *Rate Limits*: mantenha os limites padrão. Opcional: *Attack Protection → Captcha* com Cloudflare Turnstile.
+## 3. Login (só para a administração)
+Clientes **não fazem login**: agendam com nome, celular e nascimento (funções `book_as_guest`, `guest_*`, `confirm_invite`).
+A administração entra com **Google** (conta `studiolaisvettore@gmail.com`):
+1. *Authentication → URL Configuration*: Site URL e Redirect URL = `https://gabriellyvettore-bit.github.io/Studio-Lais-Vettore/`.
+2. *Providers → Google*: Client ID/Secret do Google Cloud (OAuth “Aplicativo da Web”, redirect `https://bwfawuenigptmqdfrzjj.supabase.co/auth/v1/callback`). O provedor de e-mail fica **desligado**.
 
 ## 4. Conta de administração (studiolaisvettore@gmail.com)
 Laís e Gabi usam **uma única conta**: `studiolaisvettore@gmail.com`.

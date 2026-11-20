@@ -31,8 +31,8 @@ export function Field({ label, children, className = '' }: { label: string; chil
 
 export function AdminTitle({ kicker, title, actions }: { kicker: ReactNode; title: string; actions?: ReactNode }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-      <div><p className="kicker">{kicker}</p><h1 className="mt-2 text-[clamp(2.2rem,4vw,3.2rem)] leading-none">{title}</h1></div>
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4 lg:mb-8">
+      <div><p className="kicker">{kicker}</p><h1 className="mt-1 text-[clamp(2rem,4vw,3.2rem)] leading-none">{title}</h1></div>
       {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
     </div>
   )
@@ -45,7 +45,7 @@ export function Toaster() {
   useEffect(() => { toastSet = setT; return () => { toastSet = null } }, [])
   useEffect(() => { if (!t) return; const id = setTimeout(() => setT(null), 3200); return () => clearTimeout(id) }, [t])
   if (!t) return null
-  return <div role="status" className={`fixed bottom-6 left-1/2 z-[90] -translate-x-1/2 px-5 py-3 text-sm shadow-xl [animation:fade_.3s_ease] ${t.err ? 'bg-erro text-marfim' : 'bg-espresso text-marfim'}`}>{t.msg}</div>
+  return <div role="status" className={`fixed bottom-24 lg:bottom-6 left-1/2 z-[90] -translate-x-1/2 px-5 py-3 text-sm shadow-xl [animation:fade_.3s_ease] ${t.err ? 'bg-erro text-marfim' : 'bg-espresso text-marfim'}`}>{t.msg}</div>
 }
 
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']

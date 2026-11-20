@@ -1,21 +1,12 @@
+// Login só para a administração do studio (Google). Clientes não fazem login.
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
-export interface Profile {
-  id: string
-  full_name: string
-  phone: string | null
-  email: string | null
-  birth_date: string | null
-  lgpd_consent_at: string | null
-}
-
-interface Who { is_admin_account: boolean; aal: 'aal1' | 'aal2' }
+interface Who { is_admin_account: boolean }
 
 interface AuthState {
   session: Session | null
-  profile: Profile | null
   who: Who | null
   ready: boolean
   refresh: () => Promise<void>
@@ -34,14 +25,12 @@ export const takeReturn = () => {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
   const [who, setWho] = useState<Who | null>(null)
   const [ready, setReady] = useState(!supabase)
 
   const load = useCallback(async (s: Session | null) => {
-    if (!supabase || !s) { setProfile(null); setWho(null); return }
-    const [p, w] = await Promise.all([supabase.rpc('get_my_profile'), supabase.rpc('whoami')])
-    setProfile((p.data as Profile | null) ?? null)
+    if (!supabase || !s) { setWho(null); return }
+    const w = await supabase.rpc('whoami')
     setWho((w.data as Who | null) ?? null)
   }, [])
 
@@ -53,14 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session)
       await load(data.session)
       setReady(true)
-      // limpa ?code= da URL depois do login
       if (window.location.search.includes('code=')) {
         window.history.replaceState(null, '', window.location.pathname + window.location.hash)
       }
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s)
-      // adia para fora do callback (recomendação do supabase-js)
       setTimeout(() => { void load(s) }, 0)
     })
     return () => { alive = false; sub.subscription.unsubscribe() }
@@ -75,10 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase?.auth.signOut()
-    setSession(null); setProfile(null); setWho(null)
+    setSession(null); setWho(null)
   }, [])
 
-  return <Ctx.Provider value={{ session, profile, who, ready, refresh, signOut }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ session, who, ready, refresh, signOut }}>{children}</Ctx.Provider>
 }
 
 export function useAuth() {

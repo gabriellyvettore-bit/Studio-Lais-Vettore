@@ -7,6 +7,7 @@ import { AdminTitle, Field, Modal, SignedImg, toast, uploadImage } from './ui'
 import { AppointmentForm } from './AppointmentForm'
 import { HistoryForm } from './HistoryForm'
 import { ArrowLeft, Edit, Plus, Trash, User, Whats } from '../components/Icons'
+import { sendInvite } from './invite'
 
 export default function Clientes() {
   const [q, setQ] = useState('')
@@ -42,7 +43,7 @@ export default function Clientes() {
                   <span className="block truncate font-display text-xl">{c.full_name}</span>
                   <span className="block truncate text-sm text-espresso/55">{c.phone ?? c.email ?? '—'}</span>
                 </span>
-                {!c.user_id && <span className="chip !text-[0.55rem] text-espresso/50" title="Cadastrada pelo studio, sem conta no site">sem conta</span>}
+                {!c.confirmed_at && <span className="chip shrink-0 border-bronze/50 !px-2 !text-[0.55rem] text-bronze-texto">aguardando</span>}
               </Link>
             </li>
           ))}
@@ -65,6 +66,7 @@ function ClientEditModal({ client, onClose, onSaved }: { client?: Client; onClos
   async function save(e: React.FormEvent) {
     e.preventDefault()
     if (f.full_name.trim().length < 2) return toast('Informe o nome', true)
+    if (f.phone.replace(/\D/g, '').length < 10) return toast('Informe o celular com DDD', true)
     setBusy(true)
     const row = { full_name: f.full_name.trim(), phone: f.phone || null, email: f.email || null, birth_date: f.birth_date || null }
     const res = client ? await db().from('clients').update(row).eq('id', client.id).select().single() : await db().from('clients').insert(row).select().single()
@@ -154,7 +156,7 @@ export function ClienteDetalhe() {
         <div className="min-w-0 flex-1">
           <h1 className="text-[clamp(2.2rem,4vw,3.4rem)] leading-none">{c.full_name}</h1>
           <p className="mt-2 text-sm text-espresso/60">{[c.phone, c.email, c.birth_date && `nasc. ${shortDate(c.birth_date)}`].filter(Boolean).join(' · ')}</p>
-          <p className="mt-1 text-xs text-espresso/45">{c.user_id ? 'Tem conta no site' : 'Cadastrada pelo studio'} · cliente desde {shortDate(c.created_at.slice(0, 10))}</p>
+          <p className="mt-1 text-xs text-espresso/45">Cliente desde {shortDate(c.created_at.slice(0, 10))}</p>
         </div>
         <div className="flex flex-wrap gap-3">
           {wa.length >= 10 && <a href={`https://wa.me/55${wa.replace(/^55/, '')}`} target="_blank" rel="noopener noreferrer" className="btn-line !px-4"><Whats /> WhatsApp</a>}
@@ -163,7 +165,14 @@ export function ClienteDetalhe() {
         </div>
       </div>
 
-      <div className="mt-10 grid gap-8 xl:grid-cols-12">
+      {!c.confirmed_at && (
+        <div className="mt-6 flex flex-col gap-3 border-l-4 border-bronze bg-areia/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[0.95rem]"><strong>Aguardando {c.full_name.split(' ')[0]} confirmar o cadastro.</strong> Envie o convite: ela recebe um link no WhatsApp e confirma com um toque.</p>
+          <button onClick={() => sendInvite(c).catch((e) => toast(e?.message ?? friendlyError(e), true))} className="btn-dark shrink-0"><Whats /> Enviar convite</button>
+        </div>
+      )}
+
+      <div className="mt-8 grid gap-6 xl:grid-cols-12">
         <div className="space-y-8 xl:col-span-7">
           <section className="panel p-6">
             <div className="flex items-center justify-between">
@@ -217,7 +226,13 @@ export function ClienteDetalhe() {
           <RecordForm clientId={c.id} rec={rec} onSaved={load} />
           <section className="panel space-y-3 p-6 text-sm">
             <h2 className="text-2xl">Cadastro</h2>
-            <button onClick={() => setMerge(true)} className="btn-ghost !text-[0.7rem]">Unir com outro cadastro duplicado</button><br />
+            <button onClick={() => setMerge(true)} className="btn-ghost min-h-11 !text-[0.7rem]">Unir com outro cadastro duplicado</button><br />
+            {c.confirmed_at && <><button onClick={async () => {
+              if (!confirm(`Resetar o acesso de ${c.full_name}? Os celulares lembrados saem e ela precisa confirmar de novo pelo convite.`)) return
+              const { error } = await db().rpc('admin_reset_access', { p_client: c.id })
+              if (error) return toast(friendlyError(error), true)
+              toast('Acesso resetado. Envie o novo convite.'); void load()
+            }} className="btn-ghost min-h-11 !text-[0.7rem]">Resetar acesso (uso indevido do celular)</button><br /></>}
             <button onClick={deleteClient} className="btn-ghost !text-[0.7rem] !text-erro decoration-erro/40">Excluir cliente e histórico</button>
           </section>
         </div>

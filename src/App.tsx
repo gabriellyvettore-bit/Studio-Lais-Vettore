@@ -6,12 +6,11 @@ import { Layout } from './components/Layout'
 import Home from './pages/Home'
 import Servicos from './pages/Servicos'
 import Galeria from './pages/Galeria'
-import Noivas from './pages/Noivas'
 import Contato from './pages/Contato'
 import Privacidade from './pages/Privacidade'
 import Agendar from './pages/Agendar'
-import Entrar from './pages/Entrar'
-import MinhaConta from './pages/MinhaConta'
+import MeusHorarios from './pages/MeusHorarios'
+import Confirmar from './pages/Confirmar'
 import NotFound from './pages/NotFound'
 
 const Admin = lazy(() => import('./admin/AdminRoutes'))
@@ -39,12 +38,11 @@ export default function App() {
             <Route index element={<Home />} />
             <Route path="servicos" element={<Servicos />} />
             <Route path="galeria" element={<Galeria />} />
-            <Route path="noivas" element={<Noivas />} />
             <Route path="contato" element={<Contato />} />
             <Route path="privacidade" element={<Privacidade />} />
             <Route path="agendar" element={<Agendar />} />
-            <Route path="entrar" element={<Entrar />} />
-            <Route path="conta" element={<MinhaConta />} />
+            <Route path="meus-horarios" element={<MeusHorarios />} />
+            <Route path="confirmar/:token" element={<Confirmar />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

@@ -1,16 +1,14 @@
 -- =====================================================================
--- Testes de segurança (RLS + RPC)
+-- Testes de segurança (RLS + RPC) — fluxo SEM cadastro
 -- Rodar contra um banco de TESTE já com as migrações aplicadas.
 -- Qualquer falha interrompe com "FALHOU: ...".
 -- =====================================================================
 \set ON_ERROR_STOP 1
 set client_min_messages = notice;
 
--- Usuários de teste --------------------------------------------------
 reset role;
 insert into auth.users (id, email) values
-  ('00000000-0000-0000-0000-00000000000a', 'cliente.a@teste.com'),
-  ('00000000-0000-0000-0000-00000000000b', 'cliente.b@teste.com'),
+  ('00000000-0000-0000-0000-00000000000a', 'intrusa@teste.com'),
   ('00000000-0000-0000-0000-0000000000ad', 'admin@teste.com');
 insert into public.admins (user_id) values ('00000000-0000-0000-0000-0000000000ad');
 
@@ -18,252 +16,357 @@ create or replace function pg_temp.as_user(p_sub text, p_aal text default 'aal1'
 language plpgsql as $$
 begin
   perform set_config('request.jwt.claims',
-    json_build_object('sub', p_sub, 'aal', p_aal, 'email', p_sub || '@t', 'role', 'authenticated')::text, false);
+    json_build_object('sub', p_sub, 'aal', p_aal, 'role', 'authenticated')::text, false);
 end $$;
+create or replace function pg_temp.anon() returns void language plpgsql as $$
+begin perform set_config('request.jwt.claims', '', false); end $$;
 
 -- ---------------------------------------------------------------------
--- 1. Anônimo não lê nada pessoal
+-- 1. Anônimo não lê nada pessoal nem tabelas internas
 -- ---------------------------------------------------------------------
-select set_config('request.jwt.claims', '', false);
+select pg_temp.anon();
 set role anon;
 do $$
 declare t text;
 begin
-  foreach t in array array['clients','client_records','appointments','service_history','audit_log','admins','schedule_exceptions'] loop
+  foreach t in array array['clients','client_records','appointments','service_history','audit_log','admins',
+                           'schedule_exceptions','staff_absences','client_sessions','guest_attempts','storage_purge'] loop
     begin
       execute format('select count(*) from public.%I', t);
       raise exception 'FALHOU: anon conseguiu ler %', t;
-    exception when insufficient_privilege then
-      raise notice 'OK  anon bloqueado em %', t;
+    exception when insufficient_privilege then null;
     end;
   end loop;
-end $$;
-
-do $$
-begin
-  begin
-    perform public.get_my_profile();
-    raise exception 'FALHOU: anon executou get_my_profile';
-  exception when insufficient_privilege then raise notice 'OK  anon não executa RPC de cliente'; end;
-  begin
-    insert into public.services (name) values ('hack');
-    raise exception 'FALHOU: anon inseriu serviço';
-  exception when insufficient_privilege then raise notice 'OK  anon não escreve em services'; end;
+  raise notice 'OK  anon bloqueado em todas as tabelas internas';
+  foreach t in array array['get_my_profile()', 'is_admin()', 'booking_int(''x'',1)', '_new_session(gen_random_uuid())',
+                           '_session_client(''x'')', 'slot_has_capacity(now(), now(), null)'] loop
+    begin
+      execute 'select public.' || t;
+      raise exception 'FALHOU: anon executou %', t;
+    exception when insufficient_privilege then null;
+    end;
+  end loop;
+  raise notice 'OK  anon não executa funções internas';
   if (select count(*) from public.services) = 0 then raise exception 'FALHOU: anon deveria ver serviços'; end if;
-  raise notice 'OK  anon lê serviços públicos';
 end $$;
 reset role;
 
 -- ---------------------------------------------------------------------
--- 2. Cliente A cria perfil e agenda
+-- 2. Ana agenda sem cadastro (nome, celular, nascimento)
 -- ---------------------------------------------------------------------
-select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
-set role authenticated;
+select pg_temp.anon();
+set role anon;
 do $$
-begin
-  begin
-    perform public.upsert_my_profile('Ana Teste', '(11) 99999-0000', null, false);
-    raise exception 'FALHOU: criou perfil sem consentimento LGPD';
-  exception when sqlstate '22023' then raise notice 'OK  exige consentimento LGPD'; end;
-  perform public.upsert_my_profile('Ana Teste', '(11) 99999-0000', null, true);
-  raise notice 'OK  cliente A criou perfil';
-end $$;
-
--- descobre um horário livre de corte
-do $$
-declare v_service uuid; v_day date; v_slot timestamptz; v_id uuid;
+declare v_service uuid; v_day date; v_slot timestamptz; r jsonb;
 begin
   select id into v_service from public.services where name = 'Corte + Escova';
   select day into v_day from public.get_available_days(v_service, null, null, 30) limit 1;
-  if v_day is null then raise exception 'FALHOU: nenhum dia disponível'; end if;
   select starts_at into v_slot from public.get_available_slots(v_day, v_service, null) limit 1;
-  v_id := public.book_appointment(v_service, null, v_slot, 'primeira vez');
+  begin
+    perform public.book_as_guest('Ana Teste', '(11) 99999-0000', '1990-05-10', v_service, null, v_slot, null, false);
+    raise exception 'FALHOU: agendou sem consentimento LGPD';
+  exception when sqlstate '22023' then raise notice 'OK  exige consentimento LGPD'; end;
+  begin
+    perform public.book_as_guest('Ana Teste', '123', '1990-05-10', v_service, null, v_slot, null, true);
+    raise exception 'FALHOU: aceitou celular inválido';
+  exception when sqlstate '22023' then raise notice 'OK  valida celular'; end;
+  r := public.book_as_guest('Ana Teste', '(11) 99999-0000', '1990-05-10', v_service, null, v_slot, 'primeira vez', true);
+  if r ->> 'token' is null or char_length(r ->> 'token') <> 64 then raise exception 'FALHOU: sem token de sessão'; end if;
+  perform set_config('test.ana', r ->> 'token', false);
   perform set_config('test.slot', v_slot::text, false);
   perform set_config('test.service', v_service::text, false);
-  raise notice 'OK  cliente A agendou % (status pendente)', v_slot;
-  if (select status from public.get_my_appointments() limit 1) <> 'pendente' then
+  perform set_config('test.appt', r ->> 'appointment_id', false);
+  if (select status from public.guest_appointments(r ->> 'token') limit 1) <> 'pendente' then
     raise exception 'FALHOU: status deveria ser pendente';
   end if;
-  if (select price from public.get_my_appointments() limit 1) <> 120 then
+  if (select price from public.guest_appointments(r ->> 'token') limit 1) <> 120 then
     raise exception 'FALHOU: preço deveria vir do servidor (120)';
   end if;
-  raise notice 'OK  preço calculado no servidor';
+  raise notice 'OK  Ana agendou sem cadastro; pendente; preço do servidor';
 end $$;
+reset role;
 
--- Cliente não lê tabelas diretamente
+-- a sessão é guardada só como hash
 do $$
 begin
-  if (select count(*) from public.clients) <> 0 then raise exception 'FALHOU: cliente leu tabela clients'; end if;
-  if (select count(*) from public.appointments) <> 0 then raise exception 'FALHOU: cliente leu appointments'; end if;
-  if (select count(*) from public.client_records) <> 0 then raise exception 'FALHOU: cliente leu ficha técnica'; end if;
-  if (select count(*) from public.service_history) <> 0 then raise exception 'FALHOU: cliente leu service_history'; end if;
-  raise notice 'OK  cliente não lê tabelas internas';
+  if exists (select 1 from public.client_sessions where token_hash = current_setting('test.ana')) then
+    raise exception 'FALHOU: token guardado em texto puro';
+  end if;
+  raise notice 'OK  token guardado só como hash';
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 3. Bia e intrusas: isolamento entre clientes
+-- ---------------------------------------------------------------------
+select pg_temp.anon();
+set role anon;
+do $$
+declare r jsonb;
+begin
+  -- segunda cliente no mesmo horário (2 atendentes)
+  r := public.book_as_guest('Bia Teste', '11988887777', '1985-01-20', current_setting('test.service')::uuid, null,
+                            current_setting('test.slot')::timestamptz, null, true);
+  perform set_config('test.bia', r ->> 'token', false);
+  if (select count(*) from public.guest_appointments(r ->> 'token')) <> 1 then
+    raise exception 'FALHOU: Bia vê agendamentos que não são dela';
+  end if;
+  raise notice 'OK  Bia agendou no mesmo horário (2 atendentes) e só vê o dela';
   begin
-    insert into public.appointments (client_id, service_name, starts_at, ends_at, status)
-    select id, 'x', now(), now() + interval '1h', 'confirmado' from public.clients limit 1;
-    -- insert vazio não prova nada; tenta com id conhecido
-    insert into public.appointments (client_id, service_name, starts_at, ends_at, status)
-    values (gen_random_uuid(), 'hack', now(), now() + interval '1h', 'confirmado');
-    raise exception 'FALHOU: cliente inseriu agendamento direto';
-  exception when insufficient_privilege or foreign_key_violation then
-    raise notice 'OK  cliente não insere agendamento direto (RLS)';
-  end;
+    perform public.book_as_guest('Carla Teste', '11977770000', '1980-01-01', current_setting('test.service')::uuid, null,
+                                 current_setting('test.slot')::timestamptz, null, true);
+    raise exception 'FALHOU: três clientes no mesmo horário';
+  exception when sqlstate '22023' then raise notice 'OK  terceira cliente no mesmo horário bloqueada'; end;
   begin
-    insert into public.service_history (client_id, service_name) values (gen_random_uuid(), 'hack');
-    raise exception 'FALHOU: cliente escreveu no histórico';
-  exception when insufficient_privilege or foreign_key_violation then
-    raise notice 'OK  cliente não escreve procedimentos realizados';
-  end;
+    perform public.guest_cancel(current_setting('test.bia'), current_setting('test.appt')::uuid);
+    raise exception 'FALHOU: Bia cancelou agendamento da Ana';
+  exception when sqlstate '22023' then raise notice 'OK  Bia não cancela agendamento da Ana'; end;
+  if public.guest_profile('0000000000000000000000000000000000000000000000000000000000000000') is not null
+     or (select count(*) from public.guest_appointments(null)) <> 0 then
+    raise exception 'FALHOU: token falso deu acesso';
+  end if;
+  raise notice 'OK  token falso ou vazio não dá acesso a nada';
+end $$;
+
+-- alguém agenda com o celular da Ana mas sem saber o nascimento:
+-- o pedido entra (a Laís confirma pelo WhatsApp), mas NÃO ganha acesso
+do $$
+declare r jsonb; v_day date; v_slot timestamptz;
+begin
+  select day into v_day from public.get_available_days(current_setting('test.service')::uuid, null, current_date + 5, 30) limit 1;
+  select starts_at into v_slot from public.get_available_slots(v_day, current_setting('test.service')::uuid, null) limit 1;
+  r := public.book_as_guest('Intrusa', '11 99999-0000', '2000-01-01', current_setting('test.service')::uuid, null, v_slot, null, true);
+  if r ->> 'token' is not null then raise exception 'FALHOU: celular de outra pessoa deu acesso'; end if;
+  if (r ->> 'first_name') <> 'Intrusa' then raise exception 'FALHOU: revelou o nome salvo da cliente'; end if;
+  if exists (select 1 from public.guest_appointments(current_setting('test.ana')) where starts_at = v_slot) then
+    raise exception 'FALHOU: pedido não conferido apareceu para a Ana';
+  end if;
+  raise notice 'OK  celular de outra pessoa sem o nascimento: pedido não conferido, sem acesso, sem revelar nome';
+end $$;
+
+-- login em outro aparelho: celular + nascimento, com limite de tentativas
+do $$
+declare r jsonb; i int;
+begin
+  r := public.guest_login('+55 (11) 99999-0000', '1990-05-10');
+  if r ->> 'token' is null then raise exception 'FALHOU: login com celular + nascimento'; end if;
+  for i in 1..5 loop
+    if public.guest_login('11999990000', '1999-01-01') is not null then
+      raise exception 'FALHOU: login com nascimento errado';
+    end if;
+  end loop;
+  begin
+    perform public.guest_login('11999990000', '1990-05-10');
+    raise exception 'FALHOU: sem limite de tentativas';
+  exception when sqlstate '22023' then raise notice 'OK  login por celular + nascimento, com limite de tentativas'; end;
+end $$;
+reset role;
+
+-- cliente não lê tabelas internas nem como usuária autenticada
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a', 'aal2');
+set role authenticated;
+do $$
+begin
+  if public.is_admin() then raise exception 'FALHOU: usuária comum virou admin'; end if;
+  if (select count(*) from public.clients) <> 0 then raise exception 'FALHOU: usuária leu clientes'; end if;
+  if (select count(*) from public.appointments) <> 0 then raise exception 'FALHOU: usuária leu agendamentos'; end if;
+  if (select count(*) from public.staff_absences) <> 0 then raise exception 'FALHOU: usuária leu ausências'; end if;
+  update public.staff set active = false;
   begin
     insert into public.admins (user_id) values (auth.uid());
-    raise exception 'FALHOU: cliente se promoveu a admin';
-  exception when insufficient_privilege then raise notice 'OK  cliente não vira admin'; end;
+    raise exception 'FALHOU: usuária se promoveu a admin';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.appointments (client_id, service_name, starts_at, ends_at, status)
+    values (gen_random_uuid(), 'hack', now(), now() + interval '1h', 'confirmado');
+    raise exception 'FALHOU: usuária inseriu agendamento direto';
+  exception when insufficient_privilege or foreign_key_violation then null; end;
   begin
     perform public.admin_merge_clients(gen_random_uuid(), gen_random_uuid());
-    raise exception 'FALHOU: cliente executou função de admin';
-  exception when insufficient_privilege then raise notice 'OK  função de admin bloqueada'; end;
-  if (select count(*) from storage.objects) <> 0 then raise exception 'FALHOU'; end if;
-end $$;
-reset role;
-
--- ---------------------------------------------------------------------
--- 3. Cliente B não vê nada da cliente A e não pega o mesmo horário
--- ---------------------------------------------------------------------
-select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
-set role authenticated;
-do $$
-begin
-  perform public.upsert_my_profile('Bia Teste', '11988887777', null, true);
-  if (select count(*) from public.get_my_appointments()) <> 0 then
-    raise exception 'FALHOU: cliente B viu agendamentos da A';
-  end if;
-  if (public.get_my_profile() ->> 'full_name') <> 'Bia Teste' then
-    raise exception 'FALHOU: perfil errado';
-  end if;
-  raise notice 'OK  cliente B isolada da cliente A';
-  -- com Laís e Gabi, cabem 2 clientes no mesmo horário
-  perform public.book_appointment(current_setting('test.service')::uuid, null,
-                                  current_setting('test.slot')::timestamptz, null);
-  raise notice 'OK  segunda cliente no mesmo horário (2 atendentes)';
+    raise exception 'FALHOU: usuária executou função de admin';
+  exception when insufficient_privilege then null; end;
   begin
-    perform public.book_appointment(current_setting('test.service')::uuid, null,
-                                    current_setting('test.slot')::timestamptz, null);
-    raise exception 'FALHOU: três clientes no mesmo horário com duas atendentes';
-  exception when sqlstate '22023' then raise notice 'OK  terceira cliente no mesmo horário bloqueada'; end;
-  if exists (select 1 from public.get_available_slots(
-              (current_setting('test.slot')::timestamptz at time zone 'America/Sao_Paulo')::date,
-              current_setting('test.service')::uuid, null) g
-             where g.starts_at = current_setting('test.slot')::timestamptz) then
-    raise exception 'FALHOU: horário lotado ainda aparece';
-  end if;
-end $$;
-
--- B não consegue cancelar o agendamento de A
-do $$
-declare v_id uuid;
-begin
+    perform public.admin_new_invite(gen_random_uuid());
+    raise exception 'FALHOU: usuária gerou convite';
+  exception when insufficient_privilege then null; end;
   reset role;
-  select a.id into v_id from public.appointments a join public.clients c on c.id = a.client_id where c.full_name = 'Ana Teste' limit 1;
-  perform set_config('test.appt', v_id::text, false);
-end $$;
-set role authenticated;
-do $$
-begin
-  begin
-    perform public.cancel_my_appointment(current_setting('test.appt')::uuid);
-    raise exception 'FALHOU: B cancelou agendamento da A';
-  exception when sqlstate '22023' then raise notice 'OK  B não cancela agendamento da A'; end;
+  if exists (select 1 from public.staff where not active) then raise exception 'FALHOU: equipe alterada'; end if;
+  raise notice 'OK  usuária autenticada comum (mesmo com aal2 forjado) não acessa nada';
 end $$;
 reset role;
 
 -- ---------------------------------------------------------------------
--- 4. Quem não está na tabela admins nunca é admin (nem forjando aal2);
---    a conta admin entra só com o login (sem MFA, decisão do studio)
+-- 4. Admin gerencia tudo; convite exige aprovação da cliente
 -- ---------------------------------------------------------------------
-select pg_temp.as_user('00000000-0000-0000-0000-00000000000b', 'aal2');
-set role authenticated;
-do $$
-begin
-  if public.is_admin() then raise exception 'FALHOU: cliente virou admin'; end if;
-  if (select count(*) from public.clients) <> 0 then raise exception 'FALHOU: cliente com aal2 leu clientes'; end if;
-  raise notice 'OK  cliente não vira admin nem com aal2 forjado';
-end $$;
-reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000ad', 'aal1');
 set role authenticated;
 do $$
+declare v_client uuid; v_inv uuid;
 begin
-  if not public.is_admin() then raise exception 'FALHOU: conta admin deveria ter acesso'; end if;
-  if (select count(*) from public.clients) <> 2 then raise exception 'FALHOU: admin deveria ver as clientes'; end if;
-  raise notice 'OK  conta admin acessa o painel com o login';
-end $$;
-reset role;
-
--- ---------------------------------------------------------------------
--- 5. Admin COM MFA (aal2) gerencia tudo
--- ---------------------------------------------------------------------
-select pg_temp.as_user('00000000-0000-0000-0000-0000000000ad', 'aal2');
-set role authenticated;
-do $$
-declare v_client uuid; v_hist uuid;
-begin
+  if not public.is_admin() then raise exception 'FALHOU: admin sem acesso'; end if;
   if (select count(*) from public.clients) <> 2 then raise exception 'FALHOU: admin deveria ver 2 clientes'; end if;
   update public.appointments set status = 'confirmado' where id = current_setting('test.appt')::uuid;
-  insert into public.staff_absences (staff_id, date, note)
-  values ((select id from public.staff where name = 'Gabi'), current_date + 40, 'teste');
-  delete from public.staff_absences where note = 'teste';
   select client_id into v_client from public.appointments where id = current_setting('test.appt')::uuid;
   insert into public.client_records (client_id, hair_type, allergies) values (v_client, 'Liso fino', 'Nenhuma');
   insert into public.service_history (client_id, service_name, formula, internal_notes, client_notes, price)
-  values (v_client, 'Corte sem escova', '7.1 + 20vol', 'cliente prefere franja', 'Hidratar 1x/semana', 90)
-  returning id into v_hist;
-  -- agendamento manual (pedido pelo WhatsApp), procedimento fora da lista
+  values (v_client, 'Corte sem escova', '7.1 + 20vol', 'prefere franja', 'Hidratar 1x/semana', 90);
   insert into public.appointments (client_id, service_name, starts_at, ends_at, status, price)
   values (v_client, 'Corte sem escova', now() + interval '3 days', now() + interval '3 days 40 minutes', 'confirmado', 90);
-  insert into public.clients (full_name, phone) values ('Cliente do WhatsApp', '11977776666');
-  update public.services set featured = true where name = 'Progressiva';
   insert into public.schedule_exceptions (date, kind, note) values (current_date + 10, 'fechado', 'Feriado');
+
+  -- Laís cadastra cliente do WhatsApp: fica aguardando confirmação
+  insert into public.clients (full_name, phone) values ('Dora do WhatsApp', '11966665555')
+  returning id, invite_token into v_client, v_inv;
+  if v_inv is null then raise exception 'FALHOU: convite não gerado'; end if;
+  perform set_config('test.dora', v_client::text, false);
+  perform set_config('test.invite', v_inv::text, false);
+  begin
+    update public.clients set confirmed_at = now() where id = v_client;
+    raise exception 'FALHOU: admin confirmou cliente sem aprovação dela';
+  exception when insufficient_privilege then raise notice 'OK  Laís não confirma cadastro sem a cliente'; end;
+  begin
+    insert into public.clients (full_name, phone, confirmed_at, lgpd_consent_at) values ('Falsa', '11911112222', now(), now());
+    raise exception 'FALHOU: admin criou cliente já confirmada';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.clients (full_name, phone) values ('Duplicada', '(11) 96666-5555');
+    raise exception 'FALHOU: aceitou celular duplicado';
+  exception when unique_violation then raise notice 'OK  não aceita dois cadastros com o mesmo celular'; end;
   if (select count(*) from public.audit_log) = 0 then raise exception 'FALHOU: auditoria vazia'; end if;
-  raise notice 'OK  admin com MFA gerencia clientes, ficha, histórico, agenda, serviços e exceções';
+  raise notice 'OK  admin gerencia clientes, ficha, histórico, agenda e exceções';
 end $$;
 reset role;
 
--- ---------------------------------------------------------------------
--- 6. Cliente vê o próprio histórico SEM dados internos e não edita
--- ---------------------------------------------------------------------
-select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
-set role authenticated;
+-- Dora confirma pelo link do convite
+select pg_temp.anon();
+set role anon;
 do $$
-declare j jsonb;
+declare r jsonb;
 begin
-  select to_jsonb(h) into j from public.get_my_history() h limit 1;
-  if j is null then raise exception 'FALHOU: cliente não vê o próprio histórico'; end if;
-  if j ? 'formula' or j ? 'internal_notes' or j ? 'products' then
-    raise exception 'FALHOU: histórico expõe dados internos';
+  if (public.invite_info(current_setting('test.invite')::uuid) ->> 'first_name') <> 'Dora' then
+    raise exception 'FALHOU: convite não encontrado';
   end if;
-  update public.service_history set price = 0;   -- deve afetar 0 linhas
-  reset role;
-  if exists (select 1 from public.service_history where price = 0) then
-    raise exception 'FALHOU: cliente alterou procedimento realizado';
+  if public.invite_info(gen_random_uuid()) is not null then raise exception 'FALHOU: convite falso aceito'; end if;
+  if (public.confirm_invite(current_setting('test.invite')::uuid, '1970-03-03', false) ->> 'error') is null then
+    raise exception 'FALHOU: confirmou sem consentimento';
   end if;
-  raise notice 'OK  histórico da cliente é somente leitura e sem dados internos';
+  r := public.confirm_invite(current_setting('test.invite')::uuid, '1970-03-03', true);
+  if r ->> 'token' is null then raise exception 'FALHOU: confirmação sem sessão'; end if;
+  if (public.confirm_invite(current_setting('test.invite')::uuid, '1970-03-03', true) ->> 'error') is null then
+    raise exception 'FALHOU: convite usado duas vezes';
+  end if;
+  raise notice 'OK  cliente confirma o cadastro pelo convite (uma vez só)';
+end $$;
+reset role;
+do $$
+begin
+  if (select confirmed_at from public.clients where id = current_setting('test.dora')::uuid) is null then
+    raise exception 'FALHOU: Dora não ficou confirmada';
+  end if;
 end $$;
 
-select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+-- C1: Laís cadastra Carla (sem nascimento); alguém agenda com o celular dela
+reset role;
+insert into public.clients (full_name, phone) values ('Carla Ficha', '21988881111');
+insert into public.client_records (client_id, allergies)
+select id, 'alergia a amônia' from public.clients where full_name = 'Carla Ficha';
+select pg_temp.anon();
+set role anon;
+do $$
+declare r jsonb; v_day date; v_slot timestamptz;
+begin
+  select day into v_day from public.get_available_days(current_setting('test.service')::uuid, null, current_date + 6, 30) limit 1;
+  select starts_at into v_slot from public.get_available_slots(v_day, current_setting('test.service')::uuid, null) limit 1;
+  r := public.book_as_guest('Atacante', '21988881111', '2000-01-01', current_setting('test.service')::uuid, null, v_slot, null, true);
+  if r ->> 'token' is not null then raise exception 'FALHOU: estranho pegou a ficha da Carla'; end if;
+end $$;
+reset role;
+do $$
+declare c public.clients%rowtype;
+begin
+  select * into c from public.clients where full_name = 'Carla Ficha';
+  if c.confirmed_at is not null or c.lgpd_consent_at is not null or c.birth_date is not null then
+    raise exception 'FALHOU: estranho alterou/confirmou o cadastro da Carla';
+  end if;
+  if not exists (select 1 from public.appointments where client_id = c.id and unverified and guest_name = 'Atacante') then
+    raise exception 'FALHOU: pedido não conferido não ficou marcado para a Laís';
+  end if;
+  raise notice 'OK  celular de cliente cadastrada pela Laís não dá acesso nem confirma (só o convite confirma)';
+end $$;
+
+-- A1: alguém se cadastra primeiro com o celular da Fernanda; a verdadeira agenda depois
+select pg_temp.anon();
+set role anon;
+do $$
+declare r1 jsonb; r2 jsonb; v_day date; v_slot timestamptz;
+begin
+  select day into v_day from public.get_available_days(current_setting('test.service')::uuid, null, current_date + 7, 30) limit 1;
+  select starts_at into v_slot from public.get_available_slots(v_day, current_setting('test.service')::uuid, null) limit 1;
+  r1 := public.book_as_guest('Falsa Fernanda', '31977776666', '1999-09-09', current_setting('test.service')::uuid, null, v_slot, null, true);
+  select starts_at into v_slot from public.get_available_slots(v_day, current_setting('test.service')::uuid, null) offset 2 limit 1;
+  r2 := public.book_as_guest('Fernanda Real', '31977776666', '1975-07-07', current_setting('test.service')::uuid, null, v_slot, null, true);
+  if r2 ->> 'token' is not null then raise exception 'FALHOU: sessão para dados que não conferem'; end if;
+  if exists (select 1 from public.guest_appointments(r1 ->> 'token') where starts_at = v_slot) then
+    raise exception 'FALHOU: quem chegou antes vê o pedido da Fernanda real';
+  end if;
+  raise notice 'OK  pedido de quem não confere fica oculto de quem já usa o celular';
+end $$;
+reset role;
+
+-- admin não usa funções de cliente; reset de acesso; merge sem herdar consentimento
+insert into public.clients (full_name, phone, lgpd_consent_at, confirmed_at, birth_date)
+values ('Zuleica Consentiu', '11933332222', now(), now(), '1960-01-01');
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000ad', 'aal1');
 set role authenticated;
+do $$
+declare v_fer uuid; v_new uuid; v_old uuid;
+begin
+  begin
+    perform public.confirm_invite(gen_random_uuid(), '1970-01-01', true);
+    raise exception 'FALHOU: admin usou confirm_invite';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.book_as_guest('X Y', '11955554444', '1980-01-01', current_setting('test.service')::uuid, null, now(), null, true);
+    raise exception 'FALHOU: admin usou book_as_guest';
+  exception when insufficient_privilege then null; end;
+  raise notice 'OK  conta admin não age como cliente';
+  select id into v_fer from public.clients where phone_norm = '31977776666';
+  perform public.admin_reset_access(v_fer);
+  insert into public.clients (full_name, phone) values ('Helena Nova', '11944443333') returning id into v_new;
+  select id into v_old from public.clients where full_name = 'Zuleica Consentiu';
+  perform public.admin_merge_clients(v_new, v_old);
+  if (select lgpd_consent_at from public.clients where id = v_new) is not null then
+    raise exception 'FALHOU: merge herdou consentimento';
+  end if;
+  raise notice 'OK  unir cadastros não herda consentimento';
+end $$;
+reset role;
+do $$
+begin
+  if exists (select 1 from public.client_sessions s join public.clients c on c.id = s.client_id where c.phone_norm = '31977776666') then
+    raise exception 'FALHOU: reset não encerrou as sessões';
+  end if;
+  raise notice 'OK  resetar acesso encerra sessões e exige novo convite';
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 5. Histórico da cliente: só leitura e sem dados internos; LGPD
+-- ---------------------------------------------------------------------
+select pg_temp.anon();
+set role anon;
 do $$
 declare j jsonb;
 begin
-  j := public.export_my_data();
-  if (j -> 'ficha_tecnica' ->> 'allergies') is distinct from 'Nenhuma' then
-    raise exception 'FALHOU: exportação LGPD sem a ficha técnica';
-  end if;
+  select to_jsonb(h) into j from public.guest_history(current_setting('test.ana')) h limit 1;
+  if j is null then raise exception 'FALHOU: Ana não vê o histórico'; end if;
+  if j ? 'formula' or j ? 'internal_notes' or j ? 'price' then raise exception 'FALHOU: histórico expõe dados internos'; end if;
+  j := public.guest_export(current_setting('test.ana'));
+  if (j -> 'ficha_tecnica' ->> 'allergies') is distinct from 'Nenhuma' then raise exception 'FALHOU: exportação sem ficha'; end if;
   if (j -> 'ficha_tecnica') ? 'notes' then raise exception 'FALHOU: exportação com anotação interna'; end if;
-  raise notice 'OK  exportação LGPD inclui a ficha técnica';
+  raise notice 'OK  histórico só leitura, sem dados internos; exportação LGPD completa';
 end $$;
 reset role;
 
--- agendamento pendente no passado não pode ser cancelado
+-- não cancela o que já passou; limite de pendentes
 do $$
 declare v_id uuid;
 begin
@@ -272,40 +375,29 @@ begin
     from public.clients where full_name = 'Ana Teste' returning id into v_id;
   perform set_config('test.old', v_id::text, false);
 end $$;
-select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
-set role authenticated;
+select pg_temp.anon();
+set role anon;
 do $$
+declare v_service uuid := current_setting('test.service')::uuid; d date; v_slot timestamptz;
 begin
   begin
-    perform public.cancel_my_appointment(current_setting('test.old')::uuid);
+    perform public.guest_cancel(current_setting('test.ana'), current_setting('test.old')::uuid);
     raise exception 'FALHOU: cancelou agendamento no passado';
   exception when sqlstate '22023' then raise notice 'OK  não cancela agendamento que já passou'; end;
-end $$;
-reset role;
-
--- limite de pedidos pendentes por cliente
-select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
-set role authenticated;
-do $$
-declare v_service uuid; d date; v_slot timestamptz; n int := 0;
-begin
-  select id into v_service from public.services where name = 'Corte + Escova';
-  for d in select day from public.get_available_days(v_service, null, null, 40) loop
+  for d in select day from public.get_available_days(v_service, null, current_date + 12, 40) loop
     select starts_at into v_slot from public.get_available_slots(d, v_service, null) limit 1;
     begin
-      perform public.book_appointment(v_service, null, v_slot, null);
-      n := n + 1;
+      perform public.book_as_guest(null, null, null, v_service, null, v_slot, null, false, current_setting('test.ana'));
     exception when sqlstate '22023' then
       if sqlerrm <> 'too_many_pending' then raise; end if;
       exit;
     end;
   end loop;
-  if (select count(*) from public.get_my_appointments() where status = 'pendente' and starts_at > now()) > 3 then
+  if (select count(*) from public.guest_appointments(current_setting('test.ana')) where status = 'pendente' and starts_at > now()) > 3 then
     raise exception 'FALHOU: passou do limite de pendentes';
   end if;
-  raise notice 'OK  limite de % pedidos pendentes respeitado', 3;
+  raise notice 'OK  cliente lembrada agenda sem redigitar dados; limite de 3 pendentes';
 end $$;
-reset role;
 reset role;
 
 -- ---------------------------------------------------------------------
@@ -430,29 +522,6 @@ begin
 end $$;
 reset role;
 
--- cliente e admin sem MFA não mexem na equipe nem chamam slot_has_capacity
-do $$
-declare who text;
-begin
-  foreach who in array array['00000000-0000-0000-0000-00000000000a:aal1', '00000000-0000-0000-0000-00000000000a:aal2'] loop
-    perform set_config('request.jwt.claims', json_build_object('sub', split_part(who, ':', 1), 'aal', split_part(who, ':', 2), 'role', 'authenticated')::text, false);
-    set local role authenticated;
-    if (select count(*) from public.staff_absences) <> 0 then raise exception 'FALHOU: % leu ausências', who; end if;
-    update public.staff set active = false;
-    begin
-      insert into public.staff (name) values ('Intrusa');
-      raise exception 'FALHOU: % criou atendente', who;
-    exception when insufficient_privilege then null; end;
-    begin
-      perform public.slot_has_capacity(now(), now() + interval '1 hour', null);
-      raise exception 'FALHOU: % executou slot_has_capacity', who;
-    exception when insufficient_privilege then null; end;
-    reset role;
-  end loop;
-  if exists (select 1 from public.staff where not active) then raise exception 'FALHOU: equipe alterada sem permissão'; end if;
-  raise notice 'OK  cliente não altera a equipe';
-end $$;
-
 set role anon;
 do $$
 begin
@@ -467,6 +536,27 @@ begin
 end $$;
 reset role;
 
+
+-- ---------------------------------------------------------------------
+-- 8. LGPD: excluir meus dados
+-- ---------------------------------------------------------------------
+update public.clients set photo_path = 'bia/perfil/foto.webp' where full_name = 'Bia Teste';
+select pg_temp.anon();
+set role anon;
+select public.guest_delete(current_setting('test.bia'));
+reset role;
+do $$
+begin
+  if exists (select 1 from public.clients where full_name = 'Bia Teste') then raise exception 'FALHOU: dados não excluídos'; end if;
+  if exists (select 1 from public.client_sessions s left join public.clients c on c.id = s.client_id where c.id is null) then
+    raise exception 'FALHOU: sessão órfã';
+  end if;
+  if not exists (select 1 from public.storage_purge where path = 'bia/perfil/foto.webp') then
+    raise exception 'FALHOU: foto não entrou na fila de exclusão';
+  end if;
+  raise notice 'OK  exclusão de dados (LGPD), fotos na fila de limpeza';
+end $$;
+
 -- excluir atendente limpa os serviços restritos a ela
 do $$
 declare v_tmp uuid;
@@ -478,28 +568,6 @@ begin
     raise exception 'FALHOU: serviço ficou com atendente excluída';
   end if;
   raise notice 'OK  excluir atendente limpa os serviços';
-end $$;
-
--- ---------------------------------------------------------------------
--- 8. LGPD: excluir conta
--- ---------------------------------------------------------------------
-update public.clients set photo_path = 'cliente-b/perfil/foto.webp' where full_name = 'Bia Teste';
-select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
-set role authenticated;
-select public.delete_my_account();
-reset role;
-do $$
-begin
-  if exists (select 1 from auth.users where id = '00000000-0000-0000-0000-00000000000b') then
-    raise exception 'FALHOU: conta não excluída';
-  end if;
-  if exists (select 1 from public.clients where full_name = 'Bia Teste') then
-    raise exception 'FALHOU: dados não excluídos';
-  end if;
-  if not exists (select 1 from public.storage_purge where path = 'cliente-b/perfil/foto.webp') then
-    raise exception 'FALHOU: foto da cliente não entrou na fila de exclusão';
-  end if;
-  raise notice 'OK  exclusão de conta (LGPD), fotos na fila de limpeza';
 end $$;
 
 \echo '==== TODOS OS TESTES DE SEGURANÇA PASSARAM ===='

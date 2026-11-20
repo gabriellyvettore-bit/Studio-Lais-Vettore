@@ -6,6 +6,9 @@ import type { Appointment, AppointmentStatus, Client, HairLength, Service } from
 import { Field, Modal, toast } from './ui'
 import { HistoryForm } from './HistoryForm'
 import { useStaff } from './useStaff'
+import { sendInvite } from './invite'
+import { waClient } from '../lib/whatsapp'
+import { Whats } from '../components/Icons'
 
 export function useAllServices() {
   const [list, setList] = useState<Service[]>([])
@@ -15,7 +18,9 @@ export function useAllServices() {
   return list
 }
 
-function ClientPicker({ value, onChange }: { value: Pick<Client, 'id' | 'full_name'> | null; onChange: (c: Pick<Client, 'id' | 'full_name'> | null) => void }) {
+type PickedClient = Pick<Client, 'id' | 'full_name'> & Partial<Client>
+
+function ClientPicker({ value, onChange }: { value: PickedClient | null; onChange: (c: PickedClient | null) => void }) {
   const [q, setQ] = useState('')
   const [res, setRes] = useState<Client[]>([])
   const [creating, setCreating] = useState(false)
@@ -37,14 +42,25 @@ function ClientPicker({ value, onChange }: { value: Pick<Client, 'id' | 'full_na
 
   async function create() {
     if (name.trim().length < 2) return toast('Informe o nome', true)
-    const { data, error } = await db().from('clients').insert({ full_name: name.trim(), phone: phone || null }).select().single()
+    if (phone.replace(/\D/g, '').length < 10) return toast('Informe o celular com DDD', true)
+    const { data, error } = await db().from('clients').insert({ full_name: name.trim(), phone }).select().single()
     if (error) return toast(friendlyError(error), true)
     onChange(data as Client); setCreating(false)
+    toast('Cadastrada! Envie o convite para ela confirmar.')
   }
 
   if (value) return (
-    <div className="flex items-center justify-between border border-espresso/20 bg-white/70 px-3 py-2">
-      <span>{value.full_name}</span><button type="button" onClick={() => onChange(null)} className="text-xs underline">trocar</button>
+    <div className="border border-espresso/20 bg-white/70">
+      <div className="flex min-h-12 items-center justify-between px-3">
+        <span>{value.full_name}{value.phone && <span className="ml-2 text-[0.85rem] text-espresso/55">{value.phone}</span>}</span>
+        <button type="button" onClick={() => onChange(null)} className="min-h-11 px-2 text-[0.85rem] underline">trocar</button>
+      </div>
+      {value.id && value.confirmed_at === null && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-espresso/10 bg-areia/40 px-3 py-2 text-[0.85rem]">
+          <span>Aguardando a cliente confirmar o cadastro.</span>
+          <button type="button" onClick={() => sendInvite(value as Client).catch((e) => toast(friendlyError(e) === 'Algo não saiu como esperado. Tente novamente.' ? e.message : friendlyError(e), true))} className="inline-flex min-h-10 items-center gap-1 underline"><Whats width={16} /> Enviar convite</button>
+        </div>
+      )}
     </div>
   )
   if (creating) return (
@@ -75,7 +91,7 @@ export function AppointmentForm({ appt, initialClient, initialDate, onClose, onS
   { appt?: Appointment | null; initialClient?: Pick<Client, 'id' | 'full_name'> | null; initialDate?: string; onClose: () => void; onSaved: () => void }) {
   const services = useAllServices()
   const editing = Boolean(appt)
-  const [client, setClient] = useState<Pick<Client, 'id' | 'full_name'> | null>(appt?.clients ?? initialClient ?? null)
+  const [client, setClient] = useState<PickedClient | null>(appt?.clients ?? initialClient ?? null)
   const [serviceId, setServiceId] = useState<string>(appt ? appt.service_id ?? CUSTOM : '')
   const [customName, setCustomName] = useState(appt && !appt.service_id ? appt.service_name : '')
   const [length, setLength] = useState<HairLength | ''>(appt?.hair_length ?? '')
@@ -198,6 +214,7 @@ export function AppointmentForm({ appt, initialClient, initialDate, onClose, onS
             ))}
           </div>
         </Field>
+        {appt?.unverified && <div className="sm:col-span-2 border-l-4 border-erro/60 bg-erro/5 p-3 text-sm"><strong>Dados não conferem.</strong> A pessoa digitou o nome “{appt.guest_name}”. Confira pelo WhatsApp se é mesmo esta cliente.</div>}
         {appt?.client_note && <div className="sm:col-span-2 bg-linho p-3 text-sm"><span className="label">Observação da cliente</span>“{appt.client_note}”</div>}
         <Field label="Anotação interna (a cliente não vê)" className="sm:col-span-2"><textarea rows={2} className="field-box" value={adminNote} onChange={(e) => setAdminNote(e.target.value)} maxLength={2000} /></Field>
         {conflicts.length > 0 && <p className="sm:col-span-2 border-l-2 border-bronze bg-areia/40 px-3 py-2 text-sm">{conflicts.length >= Math.max(1, staff.filter((s) => s.active).length) ? 'Atenção: o horário já está cheio' : 'Neste horário também há'} — {conflicts.join(', ')}. Você pode salvar mesmo assim.</p>}
@@ -206,7 +223,10 @@ export function AppointmentForm({ appt, initialClient, initialDate, onClose, onS
             <button disabled={busy} className="btn-dark">{busy ? 'Salvando…' : 'Salvar'}</button>
             <button type="button" onClick={onClose} className="btn-line">Fechar</button>
           </div>
-          {editing && <button type="button" onClick={remove} className="btn-ghost !text-erro decoration-erro/40">Excluir</button>}
+          {editing && client?.phone && waClient(client.phone, '') && (
+            <a href={waClient(client.phone, `Olá, ${client.full_name.split(' ')[0]}! Aqui é do Studio Lais Vettore. Seu horário: ${service?.name ?? customName}, ${date.split('-').reverse().join('/')} às ${time}.`)!} target="_blank" rel="noopener noreferrer" className="btn border border-espresso/25"><Whats /> Mandar no WhatsApp</a>
+          )}
+          {editing && <button type="button" onClick={remove} className="btn-ghost min-h-11 !text-erro decoration-erro/40">Excluir</button>}
         </div>
         {editing && price && <p className="text-xs text-espresso/45 sm:col-span-2">Valor atual: {money(Number(price.replace(',', '.')))}</p>}
       </form>

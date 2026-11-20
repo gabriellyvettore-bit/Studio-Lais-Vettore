@@ -41,6 +41,13 @@ const ERRORS: Record<string, string> = {
   invalid_name: 'Informe seu nome completo.',
   invalid_phone: 'Informe um telefone com DDD.',
   forbidden: 'Acesso negado.',
+  invalid_birth: 'Confira a data de nascimento (dia/mês/ano).',
+  too_many_attempts: 'Muitas tentativas seguidas. Espere um pouco ou fale com a gente pelo WhatsApp.',
+  invite_invalid: 'Este link de confirmação não vale mais. Peça um novo para a Laís.',
+  confirmation_requires_client: 'Só a própria cliente pode confirmar o cadastro (pelo link do convite).',
+  clients_phone_norm_uniq: 'Já existe uma cliente com este celular.',
+  not_found: 'Não encontramos esse agendamento.',
+  admin_cannot_act_as_client: 'Você está conectada como studio. Saia do painel para usar o site como cliente.',
 }
 
 export function friendlyError(e: unknown): string {

@@ -44,10 +44,6 @@ export default function Conteudo() {
           <h2 className="text-3xl">Página inicial</h2>
           {H('hero_kicker', 'Frase pequena do topo')}
           {H('hero_title', 'Título principal (a última palavra fica em itálico)')}
-          {H('hero_text', 'Texto de abertura', 3)}
-          {H('about_title', 'Título da seção sobre')}
-          {H('about_text', 'Sobre a Laís', 5)}
-          {H('bride_text', 'Texto do dia da noiva', 3)}
           <button onClick={() => save('home', home)} className="btn-dark">Salvar textos</button>
         </section>
       </div>

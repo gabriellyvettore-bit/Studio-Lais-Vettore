@@ -92,6 +92,9 @@ export interface Client {
   birth_date: string | null
   photo_path: string | null
   lgpd_consent_at: string | null
+  confirmed_at: string | null
+  invite_token: string | null
+  invite_expires_at: string | null
   created_at: string
 }
 
@@ -118,6 +121,8 @@ export interface Appointment {
   price_note: string | null
   client_note: string | null
   admin_note: string | null
+  unverified?: boolean
+  guest_name?: string | null
   clients?: Pick<Client, 'id' | 'full_name' | 'phone'> | null
 }
 

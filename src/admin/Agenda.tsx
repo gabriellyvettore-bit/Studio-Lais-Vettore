@@ -195,7 +195,7 @@ function TimeGrid({ days, byDay, isClosed, exceptions, onPick, onEmpty, staffNot
                     style={{ top, height: h, left: `calc(${(lane / total) * 100}% + 2px)`, width: `calc(${100 / total}% - 4px)` }}>
                     <span className="font-semibold">{timeSP(a.starts_at)}</span> {a.clients?.full_name}
                     <span className="block opacity-75">{a.service_name}{staffName(a.staff_id) ? ` · ${staffName(a.staff_id)}` : ''}</span>
-                    {a.status === 'pendente' && <span className="block text-[0.6rem] font-semibold uppercase tracking-wider">aguardando</span>}
+                    {a.status === 'pendente' && <span className="block text-[0.6rem] font-semibold uppercase tracking-wider">{a.unverified ? 'conferir dados' : 'aguardando'}</span>}
                   </button>
                 )
               })}
