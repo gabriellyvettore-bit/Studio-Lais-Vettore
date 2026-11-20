@@ -177,16 +177,25 @@ end $$;
 reset role;
 
 -- ---------------------------------------------------------------------
--- 4. Admin SEM MFA (aal1) não acessa nada
+-- 4. Quem não está na tabela admins nunca é admin (nem forjando aal2);
+--    a conta admin entra só com o login (sem MFA, decisão do studio)
 -- ---------------------------------------------------------------------
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b', 'aal2');
+set role authenticated;
+do $$
+begin
+  if public.is_admin() then raise exception 'FALHOU: cliente virou admin'; end if;
+  if (select count(*) from public.clients) <> 0 then raise exception 'FALHOU: cliente com aal2 leu clientes'; end if;
+  raise notice 'OK  cliente não vira admin nem com aal2 forjado';
+end $$;
+reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000ad', 'aal1');
 set role authenticated;
 do $$
 begin
-  if (select count(*) from public.clients) <> 0 then raise exception 'FALHOU: admin sem MFA leu clientes'; end if;
-  if public.is_admin() then raise exception 'FALHOU: is_admin sem MFA'; end if;
-  if not (public.whoami() ->> 'is_admin_account')::boolean then raise exception 'FALHOU: whoami'; end if;
-  raise notice 'OK  admin sem MFA é bloqueada';
+  if not public.is_admin() then raise exception 'FALHOU: conta admin deveria ter acesso'; end if;
+  if (select count(*) from public.clients) <> 2 then raise exception 'FALHOU: admin deveria ver as clientes'; end if;
+  raise notice 'OK  conta admin acessa o painel com o login';
 end $$;
 reset role;
 
@@ -425,7 +434,7 @@ reset role;
 do $$
 declare who text;
 begin
-  foreach who in array array['00000000-0000-0000-0000-00000000000a:aal1', '00000000-0000-0000-0000-0000000000ad:aal1'] loop
+  foreach who in array array['00000000-0000-0000-0000-00000000000a:aal1', '00000000-0000-0000-0000-00000000000a:aal2'] loop
     perform set_config('request.jwt.claims', json_build_object('sub', split_part(who, ':', 1), 'aal', split_part(who, ':', 2), 'role', 'authenticated')::text, false);
     set local role authenticated;
     if (select count(*) from public.staff_absences) <> 0 then raise exception 'FALHOU: % leu ausências', who; end if;
@@ -441,7 +450,7 @@ begin
     reset role;
   end loop;
   if exists (select 1 from public.staff where not active) then raise exception 'FALHOU: equipe alterada sem permissão'; end if;
-  raise notice 'OK  cliente e admin sem MFA não alteram a equipe';
+  raise notice 'OK  cliente não altera a equipe';
 end $$;
 
 set role anon;

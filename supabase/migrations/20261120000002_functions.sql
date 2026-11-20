@@ -6,12 +6,12 @@
 -- ---------------------------------------------------------------------
 -- Papéis
 -- ---------------------------------------------------------------------
--- Admin "forte": precisa estar na tabela admins E ter feito MFA (aal2).
+-- Admin: precisa estar na tabela admins (só alterável via SQL no Supabase).
+-- Decisão do studio: sem exigência de MFA no painel (login Google basta).
 create or replace function public.is_admin()
 returns boolean
 language sql stable security definer set search_path = '' as $$
-  select exists (select 1 from public.admins a where a.user_id = auth.uid())
-     and coalesce(auth.jwt() ->> 'aal', 'aal1') = 'aal2';
+  select exists (select 1 from public.admins a where a.user_id = auth.uid());
 $$;
 
 -- Informação para a própria sessão (mostrar "configure o MFA")

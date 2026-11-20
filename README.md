@@ -14,7 +14,7 @@ Site do **Studio Lais Vettore** (Rua Jacareí, 128 — Vila Rosália, Guarulhos/
 
 ## Segurança
 - Regras de acesso **dentro do banco** (Row Level Security): ninguém lê dados de outra pessoa, nem com a chave pública.
-- Painel exige conta admin **e verificação em duas etapas** (app autenticador) — checado no banco.
+- Painel só para a conta administradora (`studiolaisvettore@gmail.com`, login Google) — checado no banco.
 - Preço, duração e status do agendamento são calculados no servidor.
 - Fotos das clientes em bucket privado, com links temporários.
 - Auditoria de alterações em dados sensíveis.

@@ -1,8 +1,8 @@
 # Guia do painel — Laís e Gabi
 
-As duas usam a mesma conta (`studiolaisvettore@gmail.com`) e cada uma tem o código do Google Authenticator no próprio celular.
+As duas usam a mesma conta: `studiolaisvettore@gmail.com`.
 
-Acesse pelo rodapé do site → **Área do studio** (ou `…/#/admin`). Entre com sua conta e digite o código do Google Authenticator.
+Acesse pelo rodapé do site → **Área do studio** (ou `…/#/admin`). Entre com o Google usando a conta do studio — o painel abre direto.
 
 ## Painel (início)
 Resumo do dia, pedidos **aguardando aprovação** (botões *Confirmar* / *Recusar*) e os serviços mais procurados do mês.

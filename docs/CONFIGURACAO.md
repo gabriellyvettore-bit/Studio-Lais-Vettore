@@ -31,7 +31,6 @@ Tempo estimado: 30 a 40 minutos, uma única vez.
    2. *Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web*.
    3. Em *URIs de redirecionamento autorizados*, cole a **Callback URL** mostrada pelo Supabase na tela do provedor Google (`https://<projeto>.supabase.co/auth/v1/callback`).
    4. Copie *Client ID* e *Client Secret* para o Supabase e salve.
-4. *Multi-Factor* (MFA): confirme que **TOTP** está habilitado.
 5. *Rate Limits*: mantenha os limites padrão. Opcional: *Attack Protection → Captcha* com Cloudflare Turnstile.
 
 ## 4. Conta de administração (studiolaisvettore@gmail.com)
@@ -42,9 +41,8 @@ Laís e Gabi usam **uma única conta**: `studiolaisvettore@gmail.com`.
    insert into public.admins (user_id)
    select id from auth.users where email = 'studiolaisvettore@gmail.com';
    ```
-3. Acessem **Área do studio** (rodapé) → o site mostra um QR code do **Google Authenticator**. **As duas escaneiam o mesmo QR**, cada uma no seu celular, antes de digitar o código. A partir daí, o painel sempre pede o código de 6 dígitos (vale o de qualquer um dos dois celulares).
+3. Acessem **Área do studio** (rodapé): o painel abre direto (sem código extra, por decisão do studio). Recomenda-se ativar a verificação em duas etapas do próprio Google nessa conta.
 
-> Se ela trocar de celular e perder o autenticador: no Supabase, *Authentication → Users → (usuária) → Factors*, remova o fator e ela configura de novo.
 
 ## 5. WhatsApp
 Já vem configurado com o link do Instagram do studio (`wa.me/message/Q3WKUDLIJU73M1`). Para trocar, painel → **Textos e contato** (aceita número com DDD ou link wa.me). Com número, as mensagens já abrem escritas (ex.: “Gostaria de agendar Penteado para cabelo extra longo”).

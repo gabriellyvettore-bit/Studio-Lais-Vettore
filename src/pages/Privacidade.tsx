@@ -17,7 +17,7 @@ export default function Privacidade() {
           <p>Exclusivamente para agendar e realizar seus atendimentos, garantir sua segurança (por exemplo, evitar produtos aos quais você tem alergia) e manter o histórico do seu cabelo. Não vendemos, não compartilhamos e não usamos seus dados para publicidade de terceiros.</p>
         </S>
         <S t="Quem tem acesso">
-          <p>Somente você (aos seus próprios dados, pela sua conta) e a administração do studio. O acesso administrativo exige verificação em duas etapas. As regras de acesso são aplicadas diretamente no banco de dados, e cada alteração em dados sensíveis é registrada.</p>
+          <p>Somente você (aos seus próprios dados, pela sua conta) e a administração do studio. O acesso administrativo é restrito à conta do studio. As regras de acesso são aplicadas diretamente no banco de dados, e cada alteração em dados sensíveis é registrada.</p>
         </S>
         <S t="Onde ficam armazenados">
           <p>Em um banco de dados com criptografia em trânsito (HTTPS) e em repouso, hospedado pelo Supabase. Não guardamos senhas: o acesso é feito pelo Google ou por link enviado ao seu e-mail.</p>
