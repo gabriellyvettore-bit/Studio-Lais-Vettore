@@ -16,10 +16,7 @@ Tempo estimado: 30 a 40 minutos, uma única vez.
    > ⚠️ Nunca rode `supabase/tests/00_local_supabase_shim.sql` no Supabase — ele é só para testes locais.
 3. Em *Project Settings → API*, copie a **Project URL** e a **anon public key**.
    **Nunca** use nem divulgue a `service_role` key.
-4. No GitHub: *Settings → Secrets and variables → Actions → Variables → New repository variable*:
-   - `VITE_SUPABASE_URL` = Project URL
-   - `VITE_SUPABASE_ANON_KEY` = anon public key
-5. Rode o workflow de novo (*Actions → Testes e publicação → Run workflow*).
+4. A URL e a chave *publishable* ficam em `.env.production` (são públicas). Projeto atual: `bwfawuenigptmqdfrzjj`.
 
 ## 3. Login (Supabase → Authentication)
 1. *URL Configuration*:

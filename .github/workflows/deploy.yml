@@ -50,14 +50,10 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Build
         run: npm run build
-        env:
-          # A anon key é pública por natureza (a proteção está no RLS).
-          # Configure em Settings → Secrets and variables → Actions → Variables.
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
       - name: Garantir que nenhuma chave secreta foi parar no site
         run: |
-          if grep -rIl "service_role" dist/ ; then echo "service_role encontrada no build!"; exit 1; fi
+          if grep -rIlE "sb_secret_[A-Za-z0-9_-]{16,}" dist/ .env.production ; then echo "Chave secreta encontrada!"; exit 1; fi
+          if grep -qiE "service_role|secret" .env.production ; then echo "Chave suspeita em .env.production!"; exit 1; fi
       - uses: actions/upload-pages-artifact@v4
         if: github.ref == 'refs/heads/main'
         with:

@@ -102,7 +102,7 @@ export function Equipe() {
             {abs.length === 0 && <li className="py-3 text-sm text-espresso/50">Equipe completa em todos os próximos dias.</li>}
             {abs.map((a) => (
               <li key={a.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <span><strong className="font-semibold">{nameOf(a.staff_id)}</strong> ausente · <span className="capitalize">{longDate(a.date)}</span> {a.all_day ? '(dia todo)' : `das ${a.from_time?.slice(0, 5)} às ${a.to_time?.slice(0, 5)}`}{a.note && <span className="text-espresso/50"> · {a.note}</span>}</span>
+                <span><strong className="font-semibold">{nameOf(a.staff_id)}</strong> ausente · <span>{longDate(a.date)}</span> {a.all_day ? '(dia todo)' : `das ${a.from_time?.slice(0, 5)} às ${a.to_time?.slice(0, 5)}`}{a.note && <span className="text-espresso/50"> · {a.note}</span>}</span>
                 <button onClick={() => delAbsence(a.id)} className="p-2.5 text-erro" aria-label="Remover"><Trash /></button>
               </li>
             ))}

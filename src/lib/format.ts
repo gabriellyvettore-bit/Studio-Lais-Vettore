@@ -55,9 +55,10 @@ export const timeSP = (iso: string) => spParts(iso).time
 export const dateSP = (iso: string) => spParts(iso).date
 
 /** "2026-11-21" -> "sábado, 21 de novembro" */
-export const longDate = (ymd: string) => format(parseISO(ymd), "EEEE, d 'de' MMMM", { locale: ptBR })
+export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+export const longDate = (ymd: string) => cap(format(parseISO(ymd), "EEEE, d 'de' MMMM", { locale: ptBR }))
 export const shortDate = (ymd: string) => format(parseISO(ymd), "dd/MM/yyyy", { locale: ptBR })
-export const monthTitle = (d: Date) => format(d, "MMMM yyyy", { locale: ptBR })
+export const monthTitle = (d: Date) => cap(format(d, "MMMM yyyy", { locale: ptBR }))
 
 /** Converte data local SP + "HH:mm" em ISO UTC (SP é UTC-3, sem horário de verão desde 2019). */
 export const spToIso = (ymd: string, hhmm: string) => new Date(`${ymd}T${hhmm}:00-03:00`).toISOString()

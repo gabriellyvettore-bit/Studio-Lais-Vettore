@@ -5,7 +5,7 @@ import { ptBR } from 'date-fns/locale'
 import { useSiteData } from '../context/SiteData'
 import { rememberReturn, useAuth } from '../context/Auth'
 import { supabase, isConfigured, friendlyError } from '../lib/supabase'
-import { HAIR_LENGTHS, durationLabel, effectivePrice, lengthLabel, longDate, money, priceFor, priceSummary, promoActive, timeSP, todaySP } from '../lib/format'
+import { monthTitle, HAIR_LENGTHS, durationLabel, effectivePrice, lengthLabel, longDate, money, priceFor, priceSummary, promoActive, timeSP, todaySP } from '../lib/format'
 import { contactLink } from '../lib/whatsapp'
 import type { HairLength, Service } from '../lib/types'
 import { LoginBox, ProfileForm } from '../components/AuthForms'
@@ -234,7 +234,7 @@ function SlotPicker({ service, length, date, onDate, onSlot }:
         <p className="mt-4 text-sm text-espresso/60">{service.name}{length ? ` · ${lengthLabel(length)}` : ''} · mostramos apenas os dias com horário livre.</p>
         <div className="mt-8 flex items-center justify-between">
           <button onClick={() => setMonth((m) => addMonths(m, -1))} disabled={format(month, 'yyyy-MM') <= today.slice(0, 7)} className="p-3 disabled:opacity-25" aria-label="Mês anterior"><ArrowLeft /></button>
-          <p className="font-display text-2xl capitalize">{format(month, 'MMMM yyyy', { locale: ptBR })}</p>
+          <p className="font-display text-2xl">{monthTitle(month)}</p>
           <button onClick={() => setMonth((m) => addMonths(m, 1))} disabled={month >= maxMonth} className="p-3 disabled:opacity-25" aria-label="Próximo mês"><Arrow /></button>
         </div>
         <div className="mt-4 grid grid-cols-7 text-center text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-espresso/45">
@@ -266,7 +266,7 @@ function SlotPicker({ service, length, date, onDate, onSlot }:
           : slots.length === 0 ? <p className="mt-6 text-espresso/60">Esse dia acabou de lotar. Escolha outro.</p>
           : (
             <div className="mt-6 space-y-8">
-              <p className="text-sm capitalize text-espresso/60">{longDate(date)}</p>
+              <p className="text-sm text-espresso/60">{longDate(date)}</p>
               {Object.entries(groups).filter(([, v]) => v.length).map(([g, v]) => (
                 <div key={g}>
                   <p className="label">{g}</p>
@@ -292,7 +292,7 @@ function Summary({ service, length, slot }: { service: Service; length: HairLeng
       {[
         ['Serviço', service.name],
         ...(length ? [['Comprimento', lengthLabel(length)]] : []),
-        ['Data', <span className="capitalize">{longDate(date)}</span>],
+        ['Data', <span>{longDate(date)}</span>],
         ['Horário', `${timeSP(slot)} · duração aprox. ${durationLabel(dur)}`],
         ['Valor', price != null ? <span className="font-display text-2xl">{money(price)}</span> : <span className="text-espresso/60">Confirmado no salão</span>],
       ].map(([k, v], i) => (

@@ -47,7 +47,7 @@ export default function Painel() {
 
   return (
     <>
-      <AdminTitle kicker={<span className="capitalize">{longDate(t)}</span>} title={`Olá, ${name}.`} actions={<Link to="/admin/agenda?novo=1" className="btn-dark">Novo agendamento</Link>} />
+      <AdminTitle kicker={<span>{longDate(t)}</span>} title={`Olá, ${name}.`} actions={<Link to="/admin/agenda?novo=1" className="btn-dark">Novo agendamento</Link>} />
       <div className="grid gap-4 sm:grid-cols-3">
         {[['Hoje', today.length, 'atendimentos'], ['Aguardando', pending.length, 'para aprovar'], ['No mês', month.length, `confirmados · ${money(revenue)} concluído`]].map(([k, v, s]) => (
           <div key={k as string} className="panel p-6"><p className="label">{k}</p><p className="mt-2 font-display text-5xl">{v}</p><p className="mt-1 text-sm text-espresso/55">{s}</p></div>
@@ -63,7 +63,7 @@ export default function Painel() {
                 <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
                   <div>
                     <p className="font-display text-xl">{a.clients?.full_name}</p>
-                    <p className="text-sm capitalize text-espresso/60">{a.service_name} · {longDate(dateSP(a.starts_at))} {timeSP(a.starts_at)}</p>
+                    <p className="text-sm text-espresso/60">{a.service_name} · {longDate(dateSP(a.starts_at))} {timeSP(a.starts_at)}</p>
                     {a.client_note && <p className="mt-1 text-sm italic text-espresso/55">“{a.client_note}”</p>}
                   </div>
                   <div className="flex gap-2">

@@ -95,7 +95,7 @@ function Appointments() {
               <li key={a.id} className="panel flex flex-col p-6">
                 <span className={`chip self-start ${STATUS_STYLE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
                 <p className="mt-5 font-display text-3xl leading-none">{a.service_name}</p>
-                <p className="mt-3 capitalize text-espresso/70">{longDate(dateSP(a.starts_at))} · {timeSP(a.starts_at)}</p>
+                <p className="mt-3 text-espresso/70">{longDate(dateSP(a.starts_at))} · {timeSP(a.starts_at)}</p>
                 <p className="mt-1 text-sm text-espresso/55">{[lengthLabel(a.hair_length), a.price != null ? money(a.price) : a.price_note].filter(Boolean).join(' · ')}</p>
                 <div className="mt-6 flex flex-wrap gap-5 border-t border-espresso/10 pt-4">
                   <button onClick={() => cancel(a)} className="btn-ghost !text-[0.7rem] !text-erro decoration-erro/40">Cancelar</button>

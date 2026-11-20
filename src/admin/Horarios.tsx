@@ -111,7 +111,7 @@ export default function Horarios() {
             {ex.map((e) => (
               <li key={e.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                 <span>
-                  <span className="capitalize">{longDate(e.date)}</span> — {e.kind === 'fechado' ? 'fechado' : e.kind === 'horario_especial' ? `das ${e.first_start?.slice(0, 5)} às ${e.last_start?.slice(0, 5)}` : `bloqueado ${e.block_from?.slice(0, 5)}–${e.block_to?.slice(0, 5)}`}
+                  <span>{longDate(e.date)}</span> — {e.kind === 'fechado' ? 'fechado' : e.kind === 'horario_especial' ? `das ${e.first_start?.slice(0, 5)} às ${e.last_start?.slice(0, 5)}` : `bloqueado ${e.block_from?.slice(0, 5)}–${e.block_to?.slice(0, 5)}`}
                   {e.note && <span className="text-espresso/50"> · {e.note}</span>}
                 </span>
                 <button onClick={() => delException(e.id)} className="p-2 text-erro" aria-label="Remover"><Trash /></button>

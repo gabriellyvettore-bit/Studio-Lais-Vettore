@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { addDays, addMonths, addWeeks, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, parseISO, startOfMonth, startOfWeek } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { db, friendlyError } from '../lib/supabase'
-import { STATUS_LABEL, STATUS_STYLE, dateSP, spToIso, timeSP, todaySP } from '../lib/format'
+import { cap, STATUS_LABEL, STATUS_STYLE, dateSP, spToIso, timeSP, todaySP } from '../lib/format'
 import type { Appointment, BusinessHour, ScheduleException } from '../lib/types'
 import { AdminTitle, toast } from './ui'
 import { AppointmentForm } from './AppointmentForm'
@@ -65,9 +65,9 @@ export default function Agenda() {
   }
   const staffName = (id: string | null) => (id ? staff.find((s) => s.id === id)?.name : null)
   const move = (dir: number) => setCursor((c) => (view === 'mes' ? addMonths(c, dir) : view === 'semana' ? addWeeks(c, dir) : addDays(c, dir)))
-  const title = view === 'mes' ? format(cursor, 'MMMM yyyy', { locale: ptBR })
+  const title = view === 'mes' ? cap(format(cursor, 'MMMM yyyy', { locale: ptBR }))
     : view === 'semana' ? `${format(range.start, "d MMM", { locale: ptBR })} – ${format(range.end, "d MMM yyyy", { locale: ptBR })}`
-    : format(cursor, "EEEE, d 'de' MMMM", { locale: ptBR })
+    : cap(format(cursor, "EEEE, d 'de' MMMM", { locale: ptBR }))
   const pendingCount = appts.filter((a) => a.status === 'pendente').length
 
   return (
@@ -79,7 +79,7 @@ export default function Agenda() {
           <button onClick={() => move(-1)} className="p-2 hover:bg-white" aria-label="Anterior"><ArrowLeft /></button>
           <button onClick={() => setCursor(parseISO(todaySP()))} className="chip hover:border-espresso">Hoje</button>
           <button onClick={() => move(1)} className="p-2 hover:bg-white" aria-label="Próximo"><Arrow /></button>
-          <h2 className="ml-3 font-display text-2xl capitalize sm:text-3xl">{title}</h2>
+          <h2 className="ml-3 font-display text-2xl sm:text-3xl">{title}</h2>
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-xs text-espresso/60"><input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} className="accent-[#2b1f19]" /> mostrar cancelados</label>
