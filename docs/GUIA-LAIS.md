@@ -1,6 +1,6 @@
 # Guia do painel — Laís e Gabi
 
-As duas têm acesso completo ao painel, cada uma com a sua conta e o seu código do Google Authenticator.
+As duas usam a mesma conta (`studiolaisvettore@gmail.com`) e cada uma tem o código do Google Authenticator no próprio celular.
 
 Acesse pelo rodapé do site → **Área do studio** (ou `…/#/admin`). Entre com sua conta e digite o código do Google Authenticator.
 

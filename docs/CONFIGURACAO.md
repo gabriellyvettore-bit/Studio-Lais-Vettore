@@ -22,7 +22,10 @@ Tempo estimado: 30 a 40 minutos, uma única vez.
 1. *URL Configuration*:
    - **Site URL**: `https://gabriellyvettore-bit.github.io/Studio-Lais-Vettore/`
    - **Redirect URLs**: a mesma URL acima (e `http://localhost:5173/Studio-Lais-Vettore/` para testes).
-2. *Providers → Email*: deixe ativo (“magic link”). Em *Email Templates* você pode traduzir o e-mail para português.
+2. *Providers → Email*: deixe ativo (“magic link”) — é por onde entram as clientes sem conta Google.
+   Para os e-mails chegarem às clientes, configure o envio pelo Gmail do studio em *Authentication → Emails → SMTP Settings*:
+   host `smtp.gmail.com`, porta `465`, usuário e remetente `studiolaisvettore@gmail.com`, senha = **senha de app** do Google
+   (myaccount.google.com/apppasswords; exige verificação em duas etapas na conta).
 3. *Providers → Google*:
    1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto → *APIs e serviços → Tela de consentimento OAuth* (tipo Externo, nome “Studio Lais Vettore”).
    2. *Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web*.
@@ -31,14 +34,15 @@ Tempo estimado: 30 a 40 minutos, uma única vez.
 4. *Multi-Factor* (MFA): confirme que **TOTP** está habilitado.
 5. *Rate Limits*: mantenha os limites padrão. Opcional: *Attack Protection → Captcha* com Cloudflare Turnstile.
 
-## 4. Tornar a Laís e a Gabi administradoras
-1. Cada uma entra no site uma vez (Google ou e-mail).
+## 4. Conta de administração (studiolaisvettore@gmail.com)
+Laís e Gabi usam **uma única conta**: `studiolaisvettore@gmail.com`.
+1. Entrem no site uma vez com essa conta (botão Google).
 2. No Supabase, *SQL Editor*:
    ```sql
    insert into public.admins (user_id)
-   select id from auth.users where email in ('EMAIL-DA-LAIS@exemplo.com', 'EMAIL-DA-GABI@exemplo.com');
+   select id from auth.users where email = 'studiolaisvettore@gmail.com';
    ```
-3. Cada uma acessa **Área do studio** (rodapé) → o site pede para configurar o **Google Authenticator** (QR code). A partir daí, o painel sempre pede o código de 6 dígitos.
+3. Acessem **Área do studio** (rodapé) → o site mostra um QR code do **Google Authenticator**. **As duas escaneiam o mesmo QR**, cada uma no seu celular, antes de digitar o código. A partir daí, o painel sempre pede o código de 6 dígitos (vale o de qualquer um dos dois celulares).
 
 > Se ela trocar de celular e perder o autenticador: no Supabase, *Authentication → Users → (usuária) → Factors*, remova o fator e ela configura de novo.
 
