@@ -30,7 +30,7 @@ jobs:
       PGUSER: postgres
       PGPASSWORD: postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Aplicar migrações em banco de teste
         run: cat supabase/tests/00_local_supabase_shim.sql supabase/migrations/*.sql | psql -v ON_ERROR_STOP=1 -q
       - name: Rodar testes de RLS
@@ -40,8 +40,8 @@ jobs:
     name: Build do site
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -58,7 +58,7 @@ jobs:
       - name: Garantir que nenhuma chave secreta foi parar no site
         run: |
           if grep -rIl "service_role" dist/ ; then echo "service_role encontrada no build!"; exit 1; fi
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         if: github.ref == 'refs/heads/main'
         with:
           path: dist
