@@ -1,0 +1,119 @@
+@import "tailwindcss";
+@import "@fontsource/cormorant-garamond/400.css";
+@import "@fontsource/cormorant-garamond/500.css";
+@import "@fontsource/cormorant-garamond/600.css";
+@import "@fontsource/cormorant-garamond/400-italic.css";
+@import "@fontsource/cormorant-garamond/500-italic.css";
+@import "@fontsource-variable/manrope";
+
+@theme {
+  --color-espresso: #2b1f19;
+  --color-cacau: #6b4f3f;
+  --color-bronze: #a07d5a;
+  --color-bronze-claro: #c4a584;
+  --color-areia: #e8dccd;
+  --color-linho: #f2ebe1;
+  --color-marfim: #faf7f2;
+  --color-erro: #9b3b2f;
+  --color-ok: #4f6b4a;
+
+  --font-display: "Cormorant Garamond", "Times New Roman", serif;
+  --font-sans: "Manrope Variable", "Helvetica Neue", Arial, sans-serif;
+
+  --ease-suave: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-marfim text-espresso font-sans;
+    font-feature-settings: "ss01";
+  }
+  ::selection {
+    @apply bg-areia text-espresso;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display font-normal tracking-tight;
+  }
+  :focus-visible {
+    outline: 1.5px solid var(--color-bronze);
+    outline-offset: 3px;
+  }
+  input, select, textarea, button {
+    font: inherit;
+  }
+}
+
+@utility kicker {
+  @apply text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-bronze;
+}
+@utility rule {
+  @apply h-px w-full bg-espresso/15;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 px-6 py-3.5 text-[0.78rem] font-semibold uppercase tracking-[0.18em] transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-40;
+}
+@utility btn-dark {
+  @apply btn bg-espresso text-marfim hover:bg-cacau;
+}
+@utility btn-light {
+  @apply btn bg-marfim text-espresso hover:bg-areia;
+}
+@utility btn-line {
+  @apply btn border border-espresso/30 text-espresso hover:border-espresso hover:bg-espresso hover:text-marfim;
+}
+@utility btn-ghost {
+  @apply inline-flex items-center gap-2 text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-espresso underline decoration-bronze/60 decoration-1 underline-offset-[6px] transition hover:decoration-espresso;
+}
+@utility field {
+  @apply block w-full border-0 border-b border-espresso/25 bg-transparent px-0 py-2.5 text-[0.95rem] text-espresso placeholder:text-espresso/35 focus:border-espresso focus:outline-none focus:ring-0;
+}
+@utility field-box {
+  @apply block w-full rounded-none border border-espresso/20 bg-white/70 px-3 py-2 text-[0.92rem] text-espresso placeholder:text-espresso/35 focus:border-espresso focus:outline-none;
+}
+@utility label {
+  @apply mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-cacau;
+}
+@utility chip {
+  @apply inline-flex items-center border border-espresso/20 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em];
+}
+@utility panel {
+  @apply border border-espresso/10 bg-white/60;
+}
+
+/* Revelação suave no scroll */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.9s var(--ease-suave), transform 0.9s var(--ease-suave);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* Grão sutil de papel */
+.grain {
+  position: relative;
+}
+.grain::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+@keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
