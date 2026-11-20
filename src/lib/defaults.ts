@@ -22,7 +22,7 @@ function svc(
   return {
     id: sid, name, description, category, price_mode: mode, duration_min: duration,
     allowed_weekdays: [2, 3, 4, 5, 6], start_window_from: null, start_window_to: null,
-    bookable_online: true, active: true, featured: false, sort_order: 0, service_prices, ...opts,
+    staff_only: null, bookable_online: true, active: true, featured: false, sort_order: 0, service_prices, ...opts,
   }
 }
 
@@ -37,7 +37,7 @@ export const DEFAULT_SERVICES: Service[] = [
 
 export const DEFAULT_SETTINGS: SiteSettings = {
   contact: {
-    whatsapp: '',
+    whatsapp: 'https://wa.me/message/Q3WKUDLIJU73M1',
     phone: '(11) 2459-6382',
     instagram: 'studiolaisvettore',
     address: 'Rua Jacareí, 128 — Vila Rosália',
@@ -53,7 +53,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     about_text: 'Especialista em loiros, mega hair e dia da noiva, a Laís transformou o studio na Vila Rosália em um espaço acolhedor, onde cada cliente sai com um cabelo que conversa com a sua história. Cada atendimento começa com uma conversa — e termina com aquela vontade de se olhar no espelho de novo.',
     bride_text: 'Do teste ao grande dia: penteado, maquiagem, sala privativa e uma equipe inteira dedicada a você e às suas madrinhas.',
   },
-  booking: { min_advance_hours: 12, cancel_hours: 24, max_simultaneous: 1, slot_step_min: 30, horizon_days: 60, max_pending_per_client: 3 },
+  booking: { min_advance_hours: 12, cancel_hours: 24, slot_step_min: 30, horizon_days: 60, max_pending_per_client: 3 },
 }
 
 const g = (file: string, caption: string, category: string, i: number): GalleryItem =>

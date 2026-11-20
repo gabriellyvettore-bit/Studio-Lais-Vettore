@@ -5,6 +5,7 @@ import type { BookingSettings, BusinessHour, ScheduleException } from '../lib/ty
 import { AdminTitle, Field, toast } from './ui'
 import { useSiteData } from '../context/SiteData'
 import { Trash } from '../components/Icons'
+import { Equipe } from './Equipe'
 
 export default function Horarios() {
   const { settings, reload } = useSiteData()
@@ -56,7 +57,7 @@ export default function Horarios() {
 
   return (
     <>
-      <AdminTitle kicker="Configuração da agenda" title="Horários" />
+      <AdminTitle kicker="Configuração da agenda" title="Horários e equipe" />
       <div className="grid gap-8 xl:grid-cols-2">
         <section className="panel p-6">
           <h2 className="text-3xl">Semana padrão</h2>
@@ -119,12 +120,13 @@ export default function Horarios() {
           </ul>
         </section>
 
+        <Equipe />
+
         <section className="panel p-6 xl:col-span-2">
           <h2 className="text-3xl">Regras do agendamento online</h2>
           <div className="mt-6 grid gap-5 sm:grid-cols-3">
             <Field label="Antecedência mínima (horas)"><input type="number" min={0} max={168} className="field-box" value={bk.min_advance_hours} onChange={(e) => setBk({ ...bk, min_advance_hours: Number(e.target.value) })} /></Field>
             <Field label="Cancelar online até (horas antes)"><input type="number" min={0} max={168} className="field-box" value={bk.cancel_hours} onChange={(e) => setBk({ ...bk, cancel_hours: Number(e.target.value) })} /></Field>
-            <Field label="Clientes no mesmo horário"><input type="number" min={1} max={10} className="field-box" value={bk.max_simultaneous} onChange={(e) => setBk({ ...bk, max_simultaneous: Number(e.target.value) })} /></Field>
             <Field label="Intervalo entre horários (min)"><select className="field-box" value={bk.slot_step_min} onChange={(e) => setBk({ ...bk, slot_step_min: Number(e.target.value) })}>{[15, 30, 60].map((v) => <option key={v} value={v}>{v} min</option>)}</select></Field>
             <Field label="Agenda aberta para os próximos (dias)"><input type="number" min={7} max={365} className="field-box" value={bk.horizon_days} onChange={(e) => setBk({ ...bk, horizon_days: Number(e.target.value) })} /></Field>
             <Field label="Máx. pedidos pendentes por cliente"><input type="number" min={1} max={10} className="field-box" value={bk.max_pending_per_client} onChange={(e) => setBk({ ...bk, max_pending_per_client: Number(e.target.value) })} /></Field>

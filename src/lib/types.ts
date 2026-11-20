@@ -25,6 +25,7 @@ export interface Service {
   allowed_weekdays: number[]
   start_window_from: string | null
   start_window_to: string | null
+  staff_only: string[] | null
   bookable_online: boolean
   active: boolean
   featured: boolean
@@ -64,7 +65,6 @@ export interface HomeSettings {
 export interface BookingSettings {
   min_advance_hours: number
   cancel_hours: number
-  max_simultaneous: number
   slot_step_min: number
   horizon_days: number
   max_pending_per_client: number
@@ -110,6 +110,7 @@ export interface Appointment {
   service_id: string | null
   service_name: string
   hair_length: HairLength | null
+  staff_id: string | null
   starts_at: string
   ends_at: string
   status: AppointmentStatus
@@ -143,5 +144,22 @@ export interface ScheduleException {
   last_start: string | null
   block_from: string | null
   block_to: string | null
+  note: string | null
+}
+
+export interface Staff {
+  id: string
+  name: string
+  active: boolean
+  sort_order: number
+}
+
+export interface StaffAbsence {
+  id: string
+  staff_id: string
+  date: string
+  all_day: boolean
+  from_time: string | null
+  to_time: string | null
   note: string | null
 }

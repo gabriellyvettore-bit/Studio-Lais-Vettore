@@ -22,7 +22,7 @@ export default function Conteudo() {
       : <input className="field-box" value={home[k]} onChange={(e) => setHome({ ...home, [k]: e.target.value })} maxLength={160} />}</Field>
   )
   const C = (k: keyof ContactSettings, label: string, extra: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
-    <Field label={label}><input className="field-box" value={contact[k]} onChange={(e) => setContact({ ...contact, [k]: k === 'whatsapp' || k === 'phone' ? maskPhone(e.target.value) : e.target.value })} maxLength={300} {...extra} /></Field>
+    <Field label={label}><input className="field-box" value={contact[k]} onChange={(e) => setContact({ ...contact, [k]: k === 'phone' || (k === 'whatsapp' && /^[\d\s()+-]*$/.test(e.target.value)) ? maskPhone(e.target.value) : e.target.value })} maxLength={300} {...extra} /></Field>
   )
 
   return (
@@ -31,7 +31,7 @@ export default function Conteudo() {
       <div className="grid gap-8 xl:grid-cols-2">
         <section className="panel space-y-4 p-6">
           <h2 className="text-3xl">Contato</h2>
-          {C('whatsapp', 'WhatsApp do studio (com DDD)', { inputMode: 'tel', placeholder: '(11) 90000-0000' })}
+          {C('whatsapp', 'WhatsApp do studio (número com DDD ou link wa.me)', { placeholder: '(11) 90000-0000 ou https://wa.me/message/…' })}
           <p className="-mt-2 text-xs text-espresso/50">Todos os botões de WhatsApp do site usam este número.</p>
           {C('phone', 'Telefone fixo', { inputMode: 'tel' })}
           {C('instagram', 'Instagram (sem @)')}

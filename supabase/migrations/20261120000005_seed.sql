@@ -13,6 +13,9 @@ insert into public.business_hours (weekday, is_open, first_start, last_start) va
   (6, true,  '09:00', '16:00')
 on conflict (weekday) do nothing;
 
+-- Equipe
+insert into public.staff (name, sort_order) values ('Laís', 1), ('Gabi', 2);
+
 -- Serviços
 with s as (
   insert into public.services
@@ -58,18 +61,22 @@ select s.id, p.hair_length::public.hair_length, p.price, p.duration_min, p.unava
   ) as p(name, hair_length, price, duration_min, unavailable)
   on p.name = s.name;
 
+-- Mechas/luzes: só a Laís faz
+update public.services
+   set staff_only = array[(select id from public.staff where name = 'Laís')]
+ where name = 'Luzes / Mechas';
+
 -- Configurações
 insert into public.site_settings (key, value) values
   ('booking', jsonb_build_object(
       'min_advance_hours', 12,
       'cancel_hours', 24,
-      'max_simultaneous', 1,
       'slot_step_min', 30,
       'horizon_days', 60,
       'max_pending_per_client', 3
   )),
   ('contact', jsonb_build_object(
-      'whatsapp', '',
+      'whatsapp', 'https://wa.me/message/Q3WKUDLIJU73M1',
       'phone', '(11) 2459-6382',
       'instagram', 'studiolaisvettore',
       'address', 'Rua Jacareí, 128 — Vila Rosália',

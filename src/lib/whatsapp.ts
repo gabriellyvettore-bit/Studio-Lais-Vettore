@@ -1,15 +1,28 @@
 import type { ContactSettings } from './types'
 import { onlyDigits } from './format'
 
-/** Link para conversar com o salão. Usa o WhatsApp configurado no painel;
- *  se ainda não houver número, leva para o Instagram (Direct). */
-export function contactLink(c: ContactSettings, message = 'Olá! Vim pelo site do Studio Lais Vettore e gostaria de mais informações.') {
-  const digits = onlyDigits(c.whatsapp || '')
-  if (digits.length >= 10) {
-    const full = digits.startsWith('55') ? digits : `55${digits}`
-    return `https://wa.me/${full}?text=${encodeURIComponent(message)}`
+/** O campo WhatsApp aceita um número (com DDD) ou um link do WhatsApp Business
+ *  (ex.: https://wa.me/message/XXXX). */
+function waLink(raw: string): string | null {
+  const v = (raw || '').trim()
+  if (/^https?:/i.test(v)) {
+    try {
+      const u = new URL(v)
+      return u.protocol === 'https:' && ['wa.me', 'api.whatsapp.com'].includes(u.hostname) && !u.username ? u.href : null
+    } catch { return null }
   }
-  return `https://ig.me/m/${c.instagram || 'studiolaisvettore'}`
+  const d = onlyDigits(v)
+  if (d.length >= 10 && d.length <= 13) return `https://wa.me/${d.startsWith('55') ? d : `55${d}`}`
+  return null
 }
 
-export const hasWhatsapp = (c: ContactSettings) => onlyDigits(c.whatsapp || '').length >= 10
+/** Link para conversar com o salão. Com número, já abre com a mensagem escrita;
+ *  com link curto do WhatsApp Business, abre a conversa do studio. Sem WhatsApp
+ *  configurado, leva ao Direct do Instagram. */
+export function contactLink(c: ContactSettings, message = 'Olá! Vim pelo site do Studio Lais Vettore e gostaria de mais informações.') {
+  const link = waLink(c.whatsapp)
+  if (!link) return `https://ig.me/m/${c.instagram || 'studiolaisvettore'}`
+  return /wa\.me\/\d+$/.test(link) ? `${link}?text=${encodeURIComponent(message)}` : link
+}
+
+export const hasWhatsapp = (c: ContactSettings) => waLink(c.whatsapp) !== null

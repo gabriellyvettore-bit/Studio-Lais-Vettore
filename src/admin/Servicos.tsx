@@ -5,6 +5,7 @@ import type { HairLength, PriceMode, Service, ServicePrice } from '../lib/types'
 import { AdminTitle, Field, Modal, toast } from './ui'
 import { useSiteData } from '../context/SiteData'
 import { Down, Edit, Plus, Up } from '../components/Icons'
+import { useStaff } from './useStaff'
 
 type PriceRow = Omit<ServicePrice, 'id' | 'service_id'> & { id?: string }
 
@@ -14,6 +15,8 @@ export default function ServicosAdmin() {
   const { reload } = useSiteData()
   const [list, setList] = useState<Service[]>([])
   const [edit, setEdit] = useState<Service | 'new' | null>(null)
+  const { staff } = useStaff()
+  const staffNames = (ids: string[]) => staff.filter((x) => ids.includes(x.id)).map((x) => x.name).join(', ')
   async function load() {
     const { data, error } = await db().from('services').select('*, service_prices(*)').order('sort_order')
     if (error) toast(friendlyError(error), true)
@@ -49,6 +52,7 @@ export default function ServicosAdmin() {
                 <p className="text-sm text-espresso/55">
                   {s.category} · {durationLabel(s.duration_min)} · {s.allowed_weekdays.map((d) => WEEKDAYS_SHORT[d]).join(', ')}
                   {s.start_window_from && ` · ${s.start_window_from.slice(0, 5)}–${s.start_window_to?.slice(0, 5)}`}
+                  {s.staff_only && staffNames(s.staff_only) && ` · só ${staffNames(s.staff_only)}`}
                   {!s.bookable_online && ' · só pelo WhatsApp'}{!s.active && ' · INATIVO'}
                 </p>
               </div>
@@ -70,7 +74,9 @@ function ServiceModal({ service, onClose, onSaved }: { service: Service | null; 
     allowed_weekdays: service?.allowed_weekdays ?? [2, 3, 4, 5, 6],
     start_window_from: service?.start_window_from?.slice(0, 5) ?? '', start_window_to: service?.start_window_to?.slice(0, 5) ?? '',
     bookable_online: service?.bookable_online ?? true, active: service?.active ?? true, featured: service?.featured ?? false,
+    staff_only: service?.staff_only ?? null as string[] | null,
   })
+  const { staff } = useStaff()
   const initRows = (mode: PriceMode): PriceRow[] => mode === 'unico'
     ? [service?.service_prices.find((p) => p.hair_length == null) ?? emptyRow(null)]
     : HAIR_LENGTHS.map((l) => service?.service_prices.find((p) => p.hair_length === l.value) ?? emptyRow(l.value))
@@ -90,6 +96,7 @@ function ServiceModal({ service, onClose, onSaved }: { service: Service | null; 
       const row = {
         ...f, name: f.name.trim(), description: f.description || null,
         start_window_from: f.start_window_from || null, start_window_to: f.start_window_to || null,
+        staff_only: f.staff_only && f.staff_only.length ? f.staff_only : null,
         allowed_weekdays: [...f.allowed_weekdays].sort(),
         ...(service ? {} : { sort_order: 1000 }),
       }
@@ -138,6 +145,21 @@ function ServiceModal({ service, onClose, onSaved }: { service: Service | null; 
               const on = f.allowed_weekdays.includes(i)
               return <button type="button" key={d} onClick={() => setF({ ...f, allowed_weekdays: on ? f.allowed_weekdays.filter((x) => x !== i) : [...f.allowed_weekdays, i] })} className={`chip transition ${on ? 'border-espresso bg-espresso text-marfim' : 'hover:border-espresso'}`}>{d}</button>
             })}
+          </div>
+        </Field>
+        <Field label="Quem faz este serviço" className="sm:col-span-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {staff.map((st) => {
+              const all = !f.staff_only || f.staff_only.length === 0
+              const on = all || f.staff_only!.includes(st.id)
+              const toggle = () => {
+                const cur = all ? staff.map((x) => x.id) : f.staff_only!
+                const next = on ? cur.filter((x) => x !== st.id) : [...cur, st.id]
+                setF({ ...f, staff_only: next.length === staff.length ? null : next })
+              }
+              return <button type="button" key={st.id} onClick={toggle} className={`chip transition ${on ? 'border-espresso bg-espresso text-marfim' : 'hover:border-espresso'}`}>{st.name}</button>
+            })}
+            <span className="text-xs text-espresso/50">{!f.staff_only ? 'Todas fazem' : 'Só as marcadas — nunca dois ao mesmo tempo além delas'}</span>
           </div>
         </Field>
         <Field label="Começar a partir de (opcional)"><input type="time" className="field-box" value={f.start_window_from} onChange={(e) => setF({ ...f, start_window_from: e.target.value })} /></Field>

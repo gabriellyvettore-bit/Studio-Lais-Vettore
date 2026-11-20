@@ -16,6 +16,8 @@ alter table public.gallery_items       enable row level security;
 alter table public.site_settings       enable row level security;
 alter table public.audit_log           enable row level security;
 alter table public.storage_purge       enable row level security;
+alter table public.staff               enable row level security;
+alter table public.staff_absences      enable row level security;
 
 -- Força RLS até para o dono da tabela via API
 alter table public.clients         force row level security;
@@ -29,7 +31,7 @@ alter table public.service_history force row level security;
 -- ---------------------------------------------------------------------
 revoke all on public.admins, public.clients, public.client_records,
               public.appointments, public.service_history, public.audit_log,
-              public.schedule_exceptions
+              public.schedule_exceptions, public.staff_absences
   from anon;
 
 -- TRUNCATE/TRIGGER/REFERENCES ignoram RLS: ninguém pela API precisa deles
@@ -41,7 +43,7 @@ revoke insert, update, delete, truncate on public.audit_log from authenticated;
 revoke all on public.admins from authenticated;
 
 -- Anônimos só leem conteúdo público
-revoke insert, update, delete, truncate on public.services, public.service_prices,
+revoke insert, update, delete, truncate on public.services, public.service_prices, public.staff,
        public.business_hours, public.gallery_items, public.site_settings
   from anon;
 
@@ -69,6 +71,10 @@ create policy schedule_exceptions_admin_all on public.schedule_exceptions
   using ((select public.is_admin())) with check ((select public.is_admin()));
 
 create policy storage_purge_admin_all on public.storage_purge
+  for all to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+
+create policy staff_absences_admin_all on public.staff_absences
   for all to authenticated
   using ((select public.is_admin())) with check ((select public.is_admin()));
 
@@ -129,4 +135,16 @@ create policy settings_admin_insert on public.site_settings
 create policy settings_admin_update on public.site_settings
   for update to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
 create policy settings_admin_delete on public.site_settings
+  for delete to authenticated using ((select public.is_admin()));
+
+-- Equipe: nomes são públicos (aparecem no site); escrita só admin
+create policy staff_public_read on public.staff
+  for select to anon, authenticated using (active);
+create policy staff_admin_read on public.staff
+  for select to authenticated using ((select public.is_admin()));
+create policy staff_admin_insert on public.staff
+  for insert to authenticated with check ((select public.is_admin()));
+create policy staff_admin_update on public.staff
+  for update to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy staff_admin_delete on public.staff
   for delete to authenticated using ((select public.is_admin()));

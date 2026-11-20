@@ -141,16 +141,20 @@ begin
     raise exception 'FALHOU: perfil errado';
   end if;
   raise notice 'OK  cliente B isolada da cliente A';
+  -- com Laís e Gabi, cabem 2 clientes no mesmo horário
+  perform public.book_appointment(current_setting('test.service')::uuid, null,
+                                  current_setting('test.slot')::timestamptz, null);
+  raise notice 'OK  segunda cliente no mesmo horário (2 atendentes)';
   begin
     perform public.book_appointment(current_setting('test.service')::uuid, null,
                                     current_setting('test.slot')::timestamptz, null);
-    raise exception 'FALHOU: dois agendamentos no mesmo horário';
-  exception when sqlstate '22023' then raise notice 'OK  horário ocupado some para outras clientes'; end;
+    raise exception 'FALHOU: três clientes no mesmo horário com duas atendentes';
+  exception when sqlstate '22023' then raise notice 'OK  terceira cliente no mesmo horário bloqueada'; end;
   if exists (select 1 from public.get_available_slots(
               (current_setting('test.slot')::timestamptz at time zone 'America/Sao_Paulo')::date,
               current_setting('test.service')::uuid, null) g
              where g.starts_at = current_setting('test.slot')::timestamptz) then
-    raise exception 'FALHOU: horário ocupado ainda aparece';
+    raise exception 'FALHOU: horário lotado ainda aparece';
   end if;
 end $$;
 
@@ -159,7 +163,7 @@ do $$
 declare v_id uuid;
 begin
   reset role;
-  select id into v_id from public.appointments limit 1;
+  select a.id into v_id from public.appointments a join public.clients c on c.id = a.client_id where c.full_name = 'Ana Teste' limit 1;
   perform set_config('test.appt', v_id::text, false);
 end $$;
 set role authenticated;
@@ -196,6 +200,9 @@ declare v_client uuid; v_hist uuid;
 begin
   if (select count(*) from public.clients) <> 2 then raise exception 'FALHOU: admin deveria ver 2 clientes'; end if;
   update public.appointments set status = 'confirmado' where id = current_setting('test.appt')::uuid;
+  insert into public.staff_absences (staff_id, date, note)
+  values ((select id from public.staff where name = 'Gabi'), current_date + 40, 'teste');
+  delete from public.staff_absences where note = 'teste';
   select client_id into v_client from public.appointments where id = current_setting('test.appt')::uuid;
   insert into public.client_records (client_id, hair_type, allergies) values (v_client, 'Liso fino', 'Nenhuma');
   insert into public.service_history (client_id, service_name, formula, internal_notes, client_notes, price)
@@ -326,6 +333,142 @@ begin
     raise exception 'FALHOU: exceção de dia fechado ignorada';
   end if;
   raise notice 'OK  regras de agenda (luzes sex/sáb 9h–12h, penteado extra longo, ter–sáb, feriado)';
+end $$;
+
+
+-- ---------------------------------------------------------------------
+-- 7b. Equipe: Laís + Gabi; Gabi não faz mechas; ausências
+-- ---------------------------------------------------------------------
+reset role;
+do $$
+declare
+  v_corte uuid := (select id from public.services where name = 'Corte + Escova');
+  v_mecha uuid := (select id from public.services where name = 'Luzes / Mechas');
+  v_ana uuid := (select id from public.clients where full_name = 'Ana Teste');
+  v_laís uuid := (select id from public.staff where name = 'Laís');
+  v_gabi uuid := (select id from public.staff where name = 'Gabi');
+  d date;  d2 date;  t timestamptz;
+  has_slot boolean;
+begin
+  -- duas sextas livres, a partir de 30 dias
+  select x::date into d from generate_series(current_date + 30, current_date + 40, interval '1 day') x where extract(dow from x) = 5 limit 1;
+  d2 := d + 7;
+  t := (d + time '10:00') at time zone 'America/Sao_Paulo';
+
+  -- mecha às 10h: outra mecha não cabe, corte cabe (Gabi atende)
+  insert into public.appointments (client_id, service_id, service_name, hair_length, starts_at, ends_at, status)
+  values (v_ana, v_mecha, 'Luzes / Mechas', 'curto', t, t + interval '1 hour', 'confirmado');
+  if exists (select 1 from public.get_available_slots(d, v_mecha, 'curto') g where g.starts_at = t) then
+    raise exception 'FALHOU: duas mechas no mesmo horário';
+  end if;
+  if not exists (select 1 from public.get_available_slots(d, v_corte, null) g where g.starts_at = t) then
+    raise exception 'FALHOU: corte deveria caber junto com mecha';
+  end if;
+  raise notice 'OK  nunca duas mechas juntas; mecha + outro serviço cabe';
+
+  -- corte também às 10h: horário lotado
+  insert into public.appointments (client_id, service_id, service_name, starts_at, ends_at, status)
+  values (v_ana, v_corte, 'Corte + Escova', t, t + interval '1 hour', 'confirmado');
+  if exists (select 1 from public.get_available_slots(d, v_corte, null) g where g.starts_at = t) then
+    raise exception 'FALHOU: horário com 2 atendimentos deveria lotar';
+  end if;
+  delete from public.appointments where starts_at = t and client_id = v_ana;
+
+  -- corte atribuído à Laís às 10h bloqueia mecha (ela está ocupada)
+  insert into public.appointments (client_id, service_id, service_name, staff_id, starts_at, ends_at, status)
+  values (v_ana, v_corte, 'Corte + Escova', v_laís, t, t + interval '1 hour', 'confirmado');
+  if exists (select 1 from public.get_available_slots(d, v_mecha, 'curto') g where g.starts_at = t) then
+    raise exception 'FALHOU: mecha com a Laís ocupada';
+  end if;
+  delete from public.appointments where starts_at = t and client_id = v_ana;
+  raise notice 'OK  atendimento atribuído à Laís bloqueia mecha no mesmo horário';
+
+  -- só a Laís no dia (Gabi ausente): 1 cliente por horário
+  insert into public.staff_absences (staff_id, date) values (v_gabi, d);
+  insert into public.appointments (client_id, service_id, service_name, starts_at, ends_at, status)
+  values (v_ana, v_corte, 'Corte + Escova', t, t + interval '1 hour', 'confirmado');
+  if exists (select 1 from public.get_available_slots(d, v_corte, null) g where g.starts_at = t) then
+    raise exception 'FALHOU: com uma atendente, cabe só 1 cliente';
+  end if;
+  raise notice 'OK  dia com uma atendente: 1 cliente por horário';
+
+  -- só a Gabi (Laís ausente das 9h às 13h): sem mechas, cortes normais
+  insert into public.staff_absences (staff_id, date, all_day, from_time, to_time) values (v_laís, d2, false, '09:00', '13:00');
+  if exists (select 1 from public.get_available_slots(d2, v_mecha, 'curto')) then
+    raise exception 'FALHOU: mecha agendável sem a Laís';
+  end if;
+  select exists (select 1 from public.get_available_slots(d2, v_corte, null)) into has_slot;
+  if not has_slot then raise exception 'FALHOU: Gabi deveria atender cortes'; end if;
+  raise notice 'OK  sem a Laís não há mechas; Gabi segue atendendo';
+
+  -- ninguém trabalhando: nenhum horário
+  insert into public.staff_absences (staff_id, date) values (v_laís, d + 14), (v_gabi, d + 14);
+  if exists (select 1 from public.get_available_slots(d + 14, v_corte, null)) then
+    raise exception 'FALHOU: horários sem nenhuma atendente';
+  end if;
+  raise notice 'OK  sem atendentes, agenda fechada';
+end $$;
+
+-- anônimo não vê ausências, mas vê nomes da equipe
+set role anon;
+do $$
+begin
+  begin
+    perform count(*) from public.staff_absences;
+    raise exception 'FALHOU: anon leu ausências';
+  exception when insufficient_privilege then raise notice 'OK  anon não vê ausências da equipe'; end;
+  if (select count(*) from public.staff) <> 2 then raise exception 'FALHOU: equipe pública'; end if;
+end $$;
+reset role;
+
+-- cliente e admin sem MFA não mexem na equipe nem chamam slot_has_capacity
+do $$
+declare who text;
+begin
+  foreach who in array array['00000000-0000-0000-0000-00000000000a:aal1', '00000000-0000-0000-0000-0000000000ad:aal1'] loop
+    perform set_config('request.jwt.claims', json_build_object('sub', split_part(who, ':', 1), 'aal', split_part(who, ':', 2), 'role', 'authenticated')::text, false);
+    set local role authenticated;
+    if (select count(*) from public.staff_absences) <> 0 then raise exception 'FALHOU: % leu ausências', who; end if;
+    update public.staff set active = false;
+    begin
+      insert into public.staff (name) values ('Intrusa');
+      raise exception 'FALHOU: % criou atendente', who;
+    exception when insufficient_privilege then null; end;
+    begin
+      perform public.slot_has_capacity(now(), now() + interval '1 hour', null);
+      raise exception 'FALHOU: % executou slot_has_capacity', who;
+    exception when insufficient_privilege then null; end;
+    reset role;
+  end loop;
+  if exists (select 1 from public.staff where not active) then raise exception 'FALHOU: equipe alterada sem permissão'; end if;
+  raise notice 'OK  cliente e admin sem MFA não alteram a equipe';
+end $$;
+
+set role anon;
+do $$
+begin
+  begin
+    perform public.slot_has_capacity(now(), now() + interval '1 hour', null);
+    raise exception 'FALHOU: anon executou slot_has_capacity';
+  exception when insufficient_privilege then raise notice 'OK  anon não executa slot_has_capacity'; end;
+  begin
+    insert into public.staff (name) values ('Intrusa');
+    raise exception 'FALHOU: anon criou atendente';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+
+-- excluir atendente limpa os serviços restritos a ela
+do $$
+declare v_tmp uuid;
+begin
+  insert into public.staff (name, active) values ('Temporária', false) returning id into v_tmp;
+  update public.services set staff_only = array[v_tmp] where name = 'Progressiva';
+  delete from public.staff where id = v_tmp;
+  if (select staff_only from public.services where name = 'Progressiva') is not null then
+    raise exception 'FALHOU: serviço ficou com atendente excluída';
+  end if;
+  raise notice 'OK  excluir atendente limpa os serviços';
 end $$;
 
 -- ---------------------------------------------------------------------

@@ -10,7 +10,7 @@ const NAV = [
   { to: '/admin/agenda', label: 'Agenda', icon: Calendar },
   { to: '/admin/clientes', label: 'Clientes', icon: Users },
   { to: '/admin/servicos', label: 'Serviços e preços', icon: Scissors },
-  { to: '/admin/horarios', label: 'Horários', icon: Settings },
+  { to: '/admin/horarios', label: 'Horários e equipe', icon: Settings },
   { to: '/admin/galeria', label: 'Galeria', icon: Image },
   { to: '/admin/conteudo', label: 'Textos e contato', icon: Text },
 ]

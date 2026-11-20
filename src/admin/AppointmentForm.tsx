@@ -5,6 +5,7 @@ import { HAIR_LENGTHS, STATUS_LABEL, dateSP, effectivePrice, maskPhone, money, p
 import type { Appointment, AppointmentStatus, Client, HairLength, Service } from '../lib/types'
 import { Field, Modal, toast } from './ui'
 import { HistoryForm } from './HistoryForm'
+import { useStaff } from './useStaff'
 
 export function useAllServices() {
   const [list, setList] = useState<Service[]>([])
@@ -83,6 +84,8 @@ export function AppointmentForm({ appt, initialClient, initialDate, onClose, onS
   const [duration, setDuration] = useState(appt ? Math.round((+new Date(appt.ends_at) - +new Date(appt.starts_at)) / 60000) : 60)
   const [price, setPrice] = useState<string>(appt?.price != null ? String(appt.price) : '')
   const [status, setStatus] = useState<AppointmentStatus>(appt?.status ?? 'confirmado')
+  const [staffId, setStaffId] = useState<string>(appt?.staff_id ?? '')
+  const { staff } = useStaff()
   const [adminNote, setAdminNote] = useState(appt?.admin_note ?? '')
   const [busy, setBusy] = useState(false)
   const [conflicts, setConflicts] = useState<string[]>([])
@@ -120,6 +123,7 @@ export function AppointmentForm({ appt, initialClient, initialDate, onClose, onS
       service_id: serviceId === CUSTOM ? null : serviceId,
       service_name: name,
       hair_length: length || null,
+      staff_id: staffId || null,
       starts_at: startIso,
       ends_at: new Date(+new Date(startIso) + duration * 60000).toISOString(),
       status,
@@ -178,6 +182,15 @@ export function AppointmentForm({ appt, initialClient, initialDate, onClose, onS
         <Field label="Horário"><input type="time" step={300} className="field-box" value={time} onChange={(e) => setTime(e.target.value)} required /></Field>
         <Field label="Duração (min)"><input type="number" min={15} max={720} step={5} className="field-box" value={duration} onChange={(e) => setDuration(Number(e.target.value))} /></Field>
         <Field label="Valor (R$)"><input inputMode="decimal" className="field-box" placeholder="a definir" value={price} onChange={(e) => setPrice(e.target.value.replace(/[^\d.,]/g, ''))} /></Field>
+        <Field label="Atendente (opcional)" className="sm:col-span-2">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setStaffId('')} className={`chip transition ${!staffId ? 'border-espresso bg-espresso text-marfim' : 'hover:border-espresso'}`}>Qualquer</button>
+            {staff.filter((s) => s.active || s.id === staffId).map((s) => {
+              const notAllowed = service?.staff_only && !service.staff_only.includes(s.id)
+              return <button type="button" key={s.id} disabled={!!notAllowed} onClick={() => setStaffId(s.id)} title={notAllowed ? 'Esta atendente não faz este serviço' : undefined} className={`chip transition disabled:opacity-30 ${staffId === s.id ? 'border-espresso bg-espresso text-marfim' : 'hover:border-espresso'}`}>{s.name}</button>
+            })}
+          </div>
+        </Field>
         <Field label="Status" className="sm:col-span-2">
           <div className="flex flex-wrap gap-2">
             {(Object.keys(STATUS_LABEL) as AppointmentStatus[]).map((s) => (
@@ -187,7 +200,7 @@ export function AppointmentForm({ appt, initialClient, initialDate, onClose, onS
         </Field>
         {appt?.client_note && <div className="sm:col-span-2 bg-linho p-3 text-sm"><span className="label">Observação da cliente</span>“{appt.client_note}”</div>}
         <Field label="Anotação interna (a cliente não vê)" className="sm:col-span-2"><textarea rows={2} className="field-box" value={adminNote} onChange={(e) => setAdminNote(e.target.value)} maxLength={2000} /></Field>
-        {conflicts.length > 0 && <p className="sm:col-span-2 border-l-2 border-bronze bg-areia/40 px-3 py-2 text-sm">Atenção: já existe agendamento nesse horário — {conflicts.join(', ')}. Você pode salvar mesmo assim.</p>}
+        {conflicts.length > 0 && <p className="sm:col-span-2 border-l-2 border-bronze bg-areia/40 px-3 py-2 text-sm">{conflicts.length >= Math.max(1, staff.filter((s) => s.active).length) ? 'Atenção: o horário já está cheio' : 'Neste horário também há'} — {conflicts.join(', ')}. Você pode salvar mesmo assim.</p>}
         <div className="flex flex-wrap items-center justify-between gap-4 sm:col-span-2">
           <div className="flex gap-3">
             <button disabled={busy} className="btn-dark">{busy ? 'Salvando…' : 'Salvar'}</button>

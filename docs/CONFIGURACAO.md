@@ -34,19 +34,19 @@ Tempo estimado: 30 a 40 minutos, uma única vez.
 4. *Multi-Factor* (MFA): confirme que **TOTP** está habilitado.
 5. *Rate Limits*: mantenha os limites padrão. Opcional: *Attack Protection → Captcha* com Cloudflare Turnstile.
 
-## 4. Tornar a Laís administradora
-1. A Laís entra no site uma vez (Google ou e-mail).
+## 4. Tornar a Laís e a Gabi administradoras
+1. Cada uma entra no site uma vez (Google ou e-mail).
 2. No Supabase, *SQL Editor*:
    ```sql
    insert into public.admins (user_id)
-   select id from auth.users where email = 'EMAIL-DA-LAIS@exemplo.com';
+   select id from auth.users where email in ('EMAIL-DA-LAIS@exemplo.com', 'EMAIL-DA-GABI@exemplo.com');
    ```
-3. Ela acessa **Área do studio** (rodapé) → o site pede para configurar o **Google Authenticator** (QR code). A partir daí, o painel sempre pede o código de 6 dígitos.
+3. Cada uma acessa **Área do studio** (rodapé) → o site pede para configurar o **Google Authenticator** (QR code). A partir daí, o painel sempre pede o código de 6 dígitos.
 
 > Se ela trocar de celular e perder o autenticador: no Supabase, *Authentication → Users → (usuária) → Factors*, remova o fator e ela configura de novo.
 
 ## 5. WhatsApp
-No painel → **Textos e contato**, preencha o WhatsApp do studio. Todos os botões do site passam a abrir a conversa (até lá, eles levam ao Direct do Instagram).
+Já vem configurado com o link do Instagram do studio (`wa.me/message/Q3WKUDLIJU73M1`). Para trocar, painel → **Textos e contato** (aceita número com DDD ou link wa.me). Com número, as mensagens já abrem escritas (ex.: “Gostaria de agendar Penteado para cabelo extra longo”).
 
 ## Backups
 O plano gratuito do Supabase guarda backups diários por pouco tempo. Recomenda-se exportar periodicamente (*Database → Backups* ou `pg_dump`). Projetos gratuitos sem acesso por 7 dias podem ser pausados — basta reativar no painel do Supabase (o uso diário do site evita isso).

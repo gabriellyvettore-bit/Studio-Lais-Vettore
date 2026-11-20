@@ -38,6 +38,62 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- ---------------------------------------------------------------------
+-- Capacidade de um intervalo, considerando a equipe:
+--  * total de atendimentos simultâneos < atendentes presentes;
+--  * serviço restrito (ex.: mechas só com a Laís) precisa de uma atendente
+--    qualificada livre: atendimentos que disputam as mesmas atendentes
+--    (restritos a elas ou já atribuídos a elas) < atendentes qualificadas.
+-- ---------------------------------------------------------------------
+create or replace function public.slot_has_capacity(
+  p_start timestamptz,
+  p_end timestamptz,
+  p_staff_only uuid[]
+)
+returns boolean
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  tz constant text := 'America/Sao_Paulo';
+  v_date date := (p_start at time zone tz)::date;
+  v_avail uuid[];
+  v_qual  uuid[];
+  v_busy  int;
+begin
+  select coalesce(array_agg(st.id), '{}') into v_avail
+    from public.staff st
+   where st.active
+     and not exists (
+       select 1 from public.staff_absences ab
+        where ab.staff_id = st.id and ab.date = v_date
+          and (ab.all_day or tstzrange((v_date + ab.from_time) at time zone tz,
+                                       (v_date + ab.to_time)   at time zone tz)
+                             && tstzrange(p_start, p_end)));
+
+  if cardinality(v_avail) = 0 then return false; end if;
+
+  select count(*) into v_busy from public.appointments a
+   where a.status in ('pendente', 'confirmado')
+     and tstzrange(a.starts_at, a.ends_at) && tstzrange(p_start, p_end);
+  if v_busy >= cardinality(v_avail) then return false; end if;
+
+  if p_staff_only is not null and cardinality(p_staff_only) > 0 then
+    select coalesce(array_agg(x), '{}') into v_qual
+      from unnest(v_avail) x where x = any (p_staff_only);
+    if cardinality(v_qual) = 0 then return false; end if;
+
+    select count(*) into v_busy
+      from public.appointments a
+      left join public.services sv on sv.id = a.service_id
+     where a.status in ('pendente', 'confirmado')
+       and tstzrange(a.starts_at, a.ends_at) && tstzrange(p_start, p_end)
+       and (a.staff_id = any (v_qual)
+            or (a.staff_id is null and sv.staff_only is not null and sv.staff_only && v_qual));
+    if v_busy >= cardinality(v_qual) then return false; end if;
+  end if;
+
+  return true;
+end $$;
+
+-- ---------------------------------------------------------------------
 -- Horários disponíveis — devolve SÓ horários livres, nenhum dado pessoal
 -- ---------------------------------------------------------------------
 create or replace function public.get_available_slots(
@@ -58,7 +114,6 @@ declare
   v_last    time;
   v_dur     int;
   v_step    int := greatest(public.booking_int('slot_step_min', 30), 15);
-  v_cap     int := greatest(public.booking_int('max_simultaneous', 1), 1);
   v_adv     int := greatest(public.booking_int('min_advance_hours', 12), 0);
   v_horizon int := least(greatest(public.booking_int('horizon_days', 60), 1), 365);
   t         time;
@@ -124,9 +179,7 @@ begin
             and tstzrange((p_date + e.block_from) at time zone tz,
                           (p_date + e.block_to)   at time zone tz)
                 && tstzrange(v_start, v_end))
-       and (select count(*) from public.appointments a
-             where a.status in ('pendente', 'confirmado')
-               and tstzrange(a.starts_at, a.ends_at) && tstzrange(v_start, v_end)) < v_cap
+       and public.slot_has_capacity(v_start, v_end, s.staff_only)
     then
       starts_at := v_start;
       return next;
@@ -434,6 +487,18 @@ begin
   where id = p_keep;
 end $$;
 
+-- Ao excluir uma atendente, tira o id dela dos serviços restritos
+create or replace function public.staff_cleanup()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  update public.services
+     set staff_only = nullif(array_remove(staff_only, old.id), '{}')
+   where old.id = any (staff_only);
+  return old;
+end $$;
+create trigger staff_cleanup before delete on public.staff
+  for each row execute function public.staff_cleanup();
+
 -- ---------------------------------------------------------------------
 -- Auditoria
 -- ---------------------------------------------------------------------
@@ -459,6 +524,8 @@ create trigger audit_history        after insert or update or delete on public.s
 create trigger audit_appointments   after insert or update or delete on public.appointments    for each row execute function public.audit_trigger();
 create trigger audit_services       after insert or update or delete on public.services        for each row execute function public.audit_trigger();
 create trigger audit_prices         after insert or update or delete on public.service_prices  for each row execute function public.audit_trigger();
+create trigger audit_staff          after insert or update or delete on public.staff           for each row execute function public.audit_trigger();
+create trigger audit_staff_absences after insert or update or delete on public.staff_absences  for each row execute function public.audit_trigger();
 create trigger audit_admins         after insert or update or delete on public.admins          for each row execute function public.audit_trigger('user_id');
 
 -- ---------------------------------------------------------------------

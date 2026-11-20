@@ -8,6 +8,8 @@ import type { Appointment, BusinessHour, ScheduleException } from '../lib/types'
 import { AdminTitle, toast } from './ui'
 import { AppointmentForm } from './AppointmentForm'
 import { Arrow, ArrowLeft, Plus } from '../components/Icons'
+import type { StaffAbsence } from '../lib/types'
+import { useStaff } from './useStaff'
 
 type View = 'mes' | 'semana' | 'dia'
 const HOUR_PX = 64
@@ -21,6 +23,8 @@ export default function Agenda() {
   const [appts, setAppts] = useState<Appointment[]>([])
   const [hours, setHours] = useState<BusinessHour[]>([])
   const [exceptions, setExceptions] = useState<ScheduleException[]>([])
+  const [absences, setAbsences] = useState<StaffAbsence[]>([])
+  const { staff } = useStaff()
   const [editing, setEditing] = useState<Appointment | null>(null)
   const [creating, setCreating] = useState<string | null>(params.get('novo') ? todaySP() : null)
   const [showCancelled, setShowCancelled] = useState(false)
@@ -34,11 +38,13 @@ export default function Agenda() {
 
   const load = useCallback(async () => {
     const from = format(range.start, 'yyyy-MM-dd'), to = format(range.end, 'yyyy-MM-dd')
-    const [a, h, e] = await Promise.all([
+    const [a, h, e, ab] = await Promise.all([
       db().from('appointments').select('*, clients(id, full_name, phone)').gte('starts_at', spToIso(from, '00:00')).lte('starts_at', spToIso(to, '23:59')).order('starts_at'),
       db().from('business_hours').select('*'),
       db().from('schedule_exceptions').select('*').gte('date', from).lte('date', to),
+      db().from('staff_absences').select('*').gte('date', from).lte('date', to),
     ])
+    setAbsences((ab.data as StaffAbsence[]) ?? [])
     if (a.error) toast(friendlyError(a.error), true)
     setAppts((a.data as Appointment[]) ?? []); setHours((h.data as BusinessHour[]) ?? []); setExceptions((e.data as ScheduleException[]) ?? [])
   }, [range])
@@ -52,6 +58,12 @@ export default function Agenda() {
     if (exceptions.some((e) => e.date === ymd && e.kind === 'horario_especial')) return null
     return hours.find((h) => h.weekday === d.getDay())?.is_open === false ? 'Fechado' : null
   }
+  const staffNote = (ymd: string) => {
+    const list = absences.filter((a) => a.date === ymd)
+    if (!list.length) return null
+    return list.map((a) => `sem ${staff.find((s) => s.id === a.staff_id)?.name ?? '—'}${a.all_day ? '' : ` ${a.from_time?.slice(0, 5)}–${a.to_time?.slice(0, 5)}`}`).join(' · ')
+  }
+  const staffName = (id: string | null) => (id ? staff.find((s) => s.id === id)?.name : null)
   const move = (dir: number) => setCursor((c) => (view === 'mes' ? addMonths(c, dir) : view === 'semana' ? addWeeks(c, dir) : addDays(c, dir)))
   const title = view === 'mes' ? format(cursor, 'MMMM yyyy', { locale: ptBR })
     : view === 'semana' ? `${format(range.start, "d MMM", { locale: ptBR })} – ${format(range.end, "d MMM yyyy", { locale: ptBR })}`
@@ -102,7 +114,7 @@ export default function Agenda() {
           </div>
         </div>
       ) : (
-        <TimeGrid days={days} byDay={byDay} isClosed={isClosed} exceptions={exceptions} onPick={setEditing}
+        <TimeGrid days={days} byDay={byDay} isClosed={isClosed} exceptions={exceptions} onPick={setEditing} staffNote={staffNote} staffName={staffName}
           onEmpty={(ymd) => setCreating(ymd)} />
       )}
 
@@ -113,7 +125,7 @@ export default function Agenda() {
           {byDay(format(cursor, 'yyyy-MM-dd')).map((a) => (
             <li key={a.id}><button onClick={() => setEditing(a)} className="flex w-full items-center gap-4 py-4 text-left">
               <span className="w-14 font-display text-2xl">{timeSP(a.starts_at)}</span>
-              <span className="flex-1"><span className="block">{a.clients?.full_name}</span><span className="text-sm text-espresso/55">{a.service_name}</span></span>
+              <span className="flex-1"><span className="block">{a.clients?.full_name}</span><span className="text-sm text-espresso/55">{a.service_name}{staffName(a.staff_id) ? ` · ${staffName(a.staff_id)}` : ''}</span></span>
               <span className={`chip !text-[0.6rem] ${STATUS_STYLE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
             </button></li>
           ))}
@@ -140,8 +152,9 @@ function lanes(list: Appointment[]) {
   }).map((x, _i, arr) => ({ ...x, total: Math.max(...arr.filter((y) => +new Date(y.a.starts_at) < +new Date(x.a.ends_at) && +new Date(y.a.ends_at) > +new Date(x.a.starts_at)).map((y) => y.lane)) + 1 }))
 }
 
-function TimeGrid({ days, byDay, isClosed, exceptions, onPick, onEmpty }: {
+function TimeGrid({ days, byDay, isClosed, exceptions, onPick, onEmpty, staffNote, staffName }: {
   days: Date[]; byDay: (ymd: string) => Appointment[]; isClosed: (d: Date) => string | null; exceptions: ScheduleException[]
+  staffNote: (ymd: string) => string | null; staffName: (id: string | null) => string | null | undefined
   onPick: (a: Appointment) => void; onEmpty: (ymd: string) => void
 }) {
   const hoursArr = Array.from({ length: END_H - START_H }, (_, i) => START_H + i)
@@ -156,6 +169,7 @@ function TimeGrid({ days, byDay, isClosed, exceptions, onPick, onEmpty }: {
             <div key={ymd} className="border-b border-espresso/15 pb-2 text-center">
               <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-espresso/50">{format(d, 'EEE', { locale: ptBR })}</p>
               <p className={`mx-auto mt-1 flex h-9 w-9 items-center justify-center font-display text-2xl ${ymd === todaySP() ? 'rounded-full bg-espresso text-marfim' : ''}`}>{format(d, 'd')}</p>
+              <p className="mt-1 h-3 truncate px-1 text-[0.6rem] uppercase tracking-wider text-bronze-texto">{staffNote(ymd) ?? ''}</p>
             </div>
           )
         })}
@@ -180,7 +194,7 @@ function TimeGrid({ days, byDay, isClosed, exceptions, onPick, onEmpty }: {
                       a.status === 'pendente' ? 'border-bronze bg-areia' : a.status === 'concluido' ? 'border-ok bg-linho' : ['cancelado', 'recusado', 'faltou'].includes(a.status) ? 'border-erro/50 bg-white/80 line-through opacity-60' : 'border-espresso bg-espresso text-marfim'}`}
                     style={{ top, height: h, left: `calc(${(lane / total) * 100}% + 2px)`, width: `calc(${100 / total}% - 4px)` }}>
                     <span className="font-semibold">{timeSP(a.starts_at)}</span> {a.clients?.full_name}
-                    <span className="block opacity-75">{a.service_name}</span>
+                    <span className="block opacity-75">{a.service_name}{staffName(a.staff_id) ? ` · ${staffName(a.staff_id)}` : ''}</span>
                     {a.status === 'pendente' && <span className="block text-[0.6rem] font-semibold uppercase tracking-wider">aguardando</span>}
                   </button>
                 )

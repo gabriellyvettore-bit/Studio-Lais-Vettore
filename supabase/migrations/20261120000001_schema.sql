@@ -57,6 +57,32 @@ create table public.client_records (
 );
 
 -- ---------------------------------------------------------------------
+-- Equipe (ex.: Laís e Gabi). A capacidade de cada horário = atendentes
+-- trabalhando naquele momento.
+-- ---------------------------------------------------------------------
+create table public.staff (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null check (char_length(btrim(name)) between 2 and 60),
+  active     boolean not null default true,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+-- Ausências: dia inteiro ou intervalo em que a atendente não está
+create table public.staff_absences (
+  id         uuid primary key default gen_random_uuid(),
+  staff_id   uuid not null references public.staff (id) on delete cascade,
+  date       date not null,
+  all_day    boolean not null default true,
+  from_time  time,
+  to_time    time,
+  note       text check (char_length(note) <= 300),
+  created_at timestamptz not null default now(),
+  check (all_day or (from_time is not null and to_time is not null and from_time < to_time))
+);
+create index staff_absences_date_idx on public.staff_absences (date);
+
+-- ---------------------------------------------------------------------
 -- Serviços e preços
 -- ---------------------------------------------------------------------
 create table public.services (
@@ -71,6 +97,7 @@ create table public.services (
                     check (allowed_weekdays <@ '{0,1,2,3,4,5,6}'::int[]),
   start_window_from time,   -- null = segue horário do salão
   start_window_to   time,
+  staff_only        uuid[],  -- null = qualquer atendente; senão, só estas fazem
   bookable_online   boolean not null default true,
   active            boolean not null default true,
   featured          boolean not null default false,
@@ -129,6 +156,7 @@ create table public.appointments (
   service_id   uuid references public.services (id) on delete set null,
   service_name text not null check (char_length(service_name) between 2 and 120),
   hair_length  public.hair_length,
+  staff_id     uuid references public.staff (id) on delete set null,  -- atendente (opcional)
   starts_at    timestamptz not null,
   ends_at      timestamptz not null,
   status       public.appointment_status not null default 'pendente',
