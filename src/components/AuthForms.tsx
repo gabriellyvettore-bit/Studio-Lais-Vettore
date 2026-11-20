@@ -24,7 +24,10 @@ export function LoginBox({ title = 'Entre para continuar', subtitle }: { title?:
     setBusy(true)
     const { error } = await supabase!.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: redirectTo(), shouldCreateUser: true } })
     setBusy(false)
-    if (error) setErr(/rate|seconds/i.test(error.message) ? 'Aguarde alguns segundos antes de pedir outro link.' : friendlyError(error))
+    if (error) setErr(
+      /rate|seconds/i.test(error.message) ? 'Aguarde alguns segundos antes de pedir outro link.'
+      : (error.status ?? 0) >= 500 || /sending|email/i.test(error.message) ? 'Não conseguimos enviar o e-mail agora. Entre com o Google ou fale com a gente pelo WhatsApp.'
+      : friendlyError(error))
     else setSent(true)
   }
 
