@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSiteData } from '../context/SiteData'
 import { supabase, isConfigured, friendlyError } from '../lib/supabase'
-import { STATUS_LABEL, STATUS_STYLE, dateSP, lengthLabel, longDate, maskPhone, money, shortDate, timeSP } from '../lib/format'
+import { STATUS_LABEL, STATUS_STYLE, dateSP, lengthLabel, longDate, maskPhone, money, onlyDigits, shortDate, timeSP } from '../lib/format'
 import { contactLink } from '../lib/whatsapp'
 import { clearGuest, getGuest, maskBirth, parseBirth, saveGuest, type GuestSession } from '../lib/guest'
 import type { AppointmentStatus, HairLength } from '../lib/types'
@@ -29,6 +29,7 @@ function Entrar({ onIn }: { onIn: (g: GuestSession) => void }) {
   const [err, setErr] = useState('')
   async function go(e: React.FormEvent) {
     e.preventDefault(); setErr('')
+    if (![10, 11].includes(onlyDigits(phone).length)) return setErr('Confira o celular com DDD. Ex.: (11) 91234-5678')
     const b = parseBirth(birth)
     if (!b) return setErr('Confira a data de nascimento. Ex.: 25/03/1970')
     setBusy(true)
@@ -46,8 +47,8 @@ function Entrar({ onIn }: { onIn: (g: GuestSession) => void }) {
       <form onSubmit={go} className="panel mt-6 space-y-5 p-5 sm:p-8" noValidate>
         <div><label className="label" htmlFor="l-phone">Celular</label>
           <input id="l-phone" className="field-box !py-3 !text-[1.05rem]" inputMode="tel" autoComplete="tel" placeholder="(11) 91234-5678" value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} /></div>
-        <div><label className="label" htmlFor="l-birth">Data de nascimento</label>
-          <input id="l-birth" className="field-box !py-3 !text-[1.05rem]" inputMode="numeric" placeholder="dia/mês/ano" value={birth} onChange={(e) => setBirth(maskBirth(e.target.value))} /></div>
+        <div><label className="label" htmlFor="l-birth">Data de nascimento (dia/mês/ano)</label>
+          <input id="l-birth" className="field-box !py-3 !text-[1.05rem]" inputMode="numeric" autoComplete="bday" placeholder="dia/mês/ano" value={birth} onChange={(e) => setBirth(maskBirth(e.target.value))} /></div>
         {err && <p role="alert" className="bg-erro/10 p-3 text-[0.95rem] text-erro">{err}</p>}
         <button disabled={busy} className="btn-dark w-full">{busy ? 'Buscando…' : 'Ver meus horários'}</button>
       </form>
@@ -142,7 +143,7 @@ function Lista({ guest, onExit }: { guest: GuestSession; onExit: () => void }) {
             {past.map((a) => (
               <li key={a.id} className="flex items-center justify-between gap-2 py-3 text-[0.9rem]">
                 <span>{a.service_name} · {shortDate(dateSP(a.starts_at))}</span>
-                <span className={`chip !text-[0.6rem] ${STATUS_STYLE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
+                <span className={`chip !text-[0.7rem] ${STATUS_STYLE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
               </li>
             ))}
           </ul>

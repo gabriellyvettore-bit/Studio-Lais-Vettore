@@ -76,16 +76,16 @@ export default function Agenda() {
 
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-espresso/15 pb-4">
         <div className="flex items-center gap-2">
-          <button onClick={() => move(-1)} className="p-2 hover:bg-white" aria-label="Anterior"><ArrowLeft /></button>
+          <button onClick={() => move(-1)} className="flex h-11 w-11 items-center justify-center hover:bg-white" aria-label="Anterior"><ArrowLeft width={22} height={22} /></button>
           <button onClick={() => setCursor(parseISO(todaySP()))} className="chip hover:border-espresso">Hoje</button>
-          <button onClick={() => move(1)} className="p-2 hover:bg-white" aria-label="Próximo"><Arrow /></button>
+          <button onClick={() => move(1)} className="flex h-11 w-11 items-center justify-center hover:bg-white" aria-label="Próximo"><Arrow width={22} height={22} /></button>
           <h2 className="ml-3 font-display text-2xl sm:text-3xl">{title}</h2>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2 text-xs text-espresso/60"><input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} className="accent-[#2b1f19]" /> mostrar cancelados</label>
+          <label className="flex min-h-11 items-center gap-2 text-sm text-espresso/75"><input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} className="h-5 w-5 accent-[#2b1f19]" /> mostrar cancelados</label>
           <div className="flex border border-espresso/20">
             {(['dia', 'semana', 'mes'] as View[]).map((v) => (
-              <button key={v} onClick={() => setView(v)} className={`px-4 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.16em] ${view === v ? 'bg-espresso text-marfim' : 'hover:bg-white'}`}>{v === 'mes' ? 'Mês' : v}</button>
+              <button key={v} onClick={() => setView(v)} className={`min-h-11 px-4 text-[0.75rem] font-semibold uppercase tracking-[0.12em] ${view === v ? 'bg-espresso text-marfim' : 'hover:bg-white'}`}>{v === 'mes' ? 'Mês' : v}</button>
             ))}
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function Agenda() {
             <li key={a.id}><button onClick={() => setEditing(a)} className="flex w-full items-center gap-4 py-4 text-left">
               <span className="w-14 font-display text-2xl">{timeSP(a.starts_at)}</span>
               <span className="flex-1"><span className="block">{a.clients?.full_name}</span><span className="text-sm text-espresso/55">{a.service_name}{staffName(a.staff_id) ? ` · ${staffName(a.staff_id)}` : ''}</span></span>
-              <span className={`chip !text-[0.6rem] ${STATUS_STYLE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
+              <span className={`chip !text-[0.7rem] ${STATUS_STYLE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
             </button></li>
           ))}
         </ul>

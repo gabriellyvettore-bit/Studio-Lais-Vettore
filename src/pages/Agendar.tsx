@@ -5,7 +5,7 @@ import { ptBR } from 'date-fns/locale'
 import { useSiteData } from '../context/SiteData'
 import { supabase, isConfigured, friendlyError } from '../lib/supabase'
 import { maskPhone, onlyDigits } from '../lib/format'
-import { monthTitle, HAIR_LENGTHS, durationLabel, effectivePrice, lengthLabel, longDate, money, priceFor, priceSummary, promoActive, timeSP, todaySP } from '../lib/format'
+import { WEEKDAYS_SHORT, monthTitle, HAIR_LENGTHS, durationLabel, effectivePrice, lengthLabel, longDate, money, priceFor, priceSummary, promoActive, timeSP, todaySP } from '../lib/format'
 import { contactLink } from '../lib/whatsapp'
 import type { HairLength, Service } from '../lib/types'
 import { getGuest, saveGuest, clearGuest, maskBirth, parseBirth } from '../lib/guest'
@@ -56,7 +56,8 @@ export default function Agendar() {
   if (!isConfigured) return <NotReady />
   if (done) return <Success name={done.trim()} onAgain={() => { setDone(false); setDraft({}) }} />
 
-  const steps = ['Serviço', 'Cabelo', 'Dia e hora', 'Seus dados']
+  const steps = needsLength || !service ? ['Serviço', 'Cabelo', 'Dia e hora', 'Seus dados'] : ['Serviço', 'Dia e hora', 'Seus dados']
+  const stepIdx = needsLength || step === 1 ? step : step - 1
 
   return (
     <section className="mx-auto max-w-[1100px] px-5 pb-16 pt-24 sm:px-8 sm:pt-36">
@@ -64,12 +65,12 @@ export default function Agendar() {
         {step > 1
           ? <button onClick={back} className="-ml-2 flex min-h-12 items-center gap-2 px-2 text-[1rem] font-medium"><ArrowLeft width={22} height={22} /> Voltar</button>
           : <p className="kicker">Agendar horário</p>}
-        <p className="text-[0.9rem] text-espresso/60">Passo {needsLength || step === 1 ? step : step - 1} de {needsLength || step === 1 ? 4 : 3}</p>
+        <p className="text-right text-[0.95rem] text-espresso/75">Passo {stepIdx} de {steps.length}: <strong className="font-semibold">{steps[stepIdx - 1]}</strong></p>
       </div>
-      <ol className="mt-2 grid grid-cols-4 gap-2 sm:mt-6" aria-label="Etapas">
+      <ol className="mt-2 grid gap-2 sm:mt-6" style={{ gridTemplateColumns: `repeat(${steps.length}, 1fr)` }} aria-label="Etapas">
         {steps.map((s, i) => (
-          <li key={s} className={`truncate border-t-2 pt-3 text-[0.66rem] font-semibold uppercase tracking-[0.16em] transition ${i + 1 <= step ? 'border-espresso text-espresso' : 'border-espresso/15 text-espresso/35'} ${i === 1 && service && !needsLength ? 'opacity-40' : ''}`}>
-            <span className="hidden sm:inline">{String(i + 1).padStart(2, '0')} · </span><span className={i + 1 === step ? '' : 'sr-only sm:not-sr-only'}>{s}</span>
+          <li key={s} className={`border-t-4 pt-2 text-[0.7rem] font-semibold uppercase tracking-[0.12em] transition ${i + 1 <= stepIdx ? 'border-espresso text-espresso' : 'border-espresso/15 text-espresso/50'}`}>
+            <span className="hidden sm:inline">{s}</span>
           </li>
         ))}
       </ol>
@@ -105,7 +106,7 @@ export default function Agendar() {
                       <span className="mt-3 font-display text-[1.8rem] leading-none">{l.label}</span>
                       <span className="mt-1 text-[0.85rem] leading-snug text-espresso/60">{l.hint}</span>
                       <span className="mt-3 w-full border-t border-espresso/10 pt-2 text-[0.9rem]">
-                        {off ? 'Só pelo WhatsApp' : p?.price == null ? <span className="text-espresso/65">Valor no salão</span>
+                        {off ? 'Só pelo WhatsApp' : p?.price == null ? <span className="text-espresso/75">Valor combinado no salão</span>
                           : <>{promoActive(p) && <s className="mr-2 text-espresso/40">{money(p.price)}</s>}<strong className="font-display text-2xl font-normal">{money(effectivePrice(p))}</strong></>}
                       </span>
                     </button>
@@ -154,7 +155,7 @@ function ServiceCard({ s, onPick }: { s: Service; onPick: () => void }) {
           {s.description && <span className="mt-3 block text-sm leading-relaxed text-espresso/60">{s.description}</span>}
         </span>
         <span className="mt-6 flex items-end justify-between border-t border-espresso/10 pt-4">
-          <span className="text-[0.72rem] uppercase tracking-[0.14em] text-espresso/50">{durationLabel(s.duration_min)}{s.allowed_weekdays.length < 5 ? ' · dias específicos' : ''}</span>
+          <span className="text-[0.8rem] uppercase tracking-[0.1em] text-espresso/70">{durationLabel(s.duration_min)}{s.allowed_weekdays.length < 5 ? ` · só ${s.allowed_weekdays.map((d) => WEEKDAYS_SHORT[d]).join(', ')}` : ''}</span>
           <span className="flex items-center gap-3 font-display text-2xl">{p.label}<Arrow className="text-bronze transition group-hover:translate-x-1" /></span>
         </span>
       </button>
@@ -211,7 +212,12 @@ function SlotPicker({ service, length, date, onDate, onSlot }:
     return () => { alive = false }
   }, [date, service.id, length])
 
-  const grid = useMemo(() => eachDayOfInterval({ start: startOfWeek(month), end: endOfWeek(endOfMonth(month)) }), [month])
+  // no mês atual, o calendário começa na semana de hoje (sem semanas passadas ocupando a tela)
+  const grid = useMemo(() => {
+    const first = format(month, 'yyyy-MM') === today.slice(0, 7) ? new Date(`${today}T12:00:00`) : month
+    return eachDayOfInterval({ start: startOfWeek(first), end: endOfWeek(endOfMonth(month)) })
+  }, [month, today])
+  const daysInMonth = days ? [...days].filter((d) => d.startsWith(format(month, 'yyyy-MM'))).length : 0
   const groups = useMemo(() => {
     const g: Record<string, string[]> = { Manhã: [], Tarde: [] }
     for (const s of slots ?? []) g[Number(timeSP(s).slice(0, 2)) < 12 ? 'Manhã' : 'Tarde'].push(s)
@@ -224,9 +230,9 @@ function SlotPicker({ service, length, date, onDate, onSlot }:
         <h1 className="text-[clamp(2.4rem,5vw,3.6rem)] leading-none">Escolha o <em className="text-cacau">dia.</em></h1>
         <p className="mt-4 text-sm text-espresso/60">{service.name}{length ? ` · ${lengthLabel(length)}` : ''} · mostramos apenas os dias com horário livre.</p>
         <div className="mt-8 flex items-center justify-between">
-          <button onClick={() => setMonth((m) => addMonths(m, -1))} disabled={format(month, 'yyyy-MM') <= today.slice(0, 7)} className="p-3 disabled:opacity-25" aria-label="Mês anterior"><ArrowLeft /></button>
+          <button onClick={() => setMonth((m) => addMonths(m, -1))} disabled={format(month, 'yyyy-MM') <= today.slice(0, 7)} className="flex h-12 w-12 items-center justify-center disabled:opacity-25" aria-label="Mês anterior"><ArrowLeft width={22} height={22} /></button>
           <p className="font-display text-2xl">{monthTitle(month)}</p>
-          <button onClick={() => setMonth((m) => addMonths(m, 1))} disabled={month >= maxMonth} className="p-3 disabled:opacity-25" aria-label="Próximo mês"><Arrow /></button>
+          <button onClick={() => setMonth((m) => addMonths(m, 1))} disabled={month >= maxMonth} className="flex h-12 w-12 items-center justify-center disabled:opacity-25" aria-label="Próximo mês"><Arrow width={22} height={22} /></button>
         </div>
         <div className="mt-4 grid grid-cols-7 text-center text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-espresso/45">
           {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => <span key={i} className="py-2">{d}</span>)}
@@ -246,18 +252,24 @@ function SlotPicker({ service, length, date, onDate, onSlot }:
             )
           })}
         </div>
-        {days && days.size === 0 && !err && <p className="mt-6 text-sm text-espresso/60">Sem horários livres neste mês. Tente o próximo ou <a className="underline" href={contactLink(settings.contact)} target="_blank" rel="noopener noreferrer">fale com a gente</a>.</p>}
+        {days && daysInMonth === 0 && !err && <p className="mt-6 text-[0.95rem] text-espresso/75">Sem horários livres neste mês. Veja o próximo ou <a className="underline" href={contactLink(settings.contact)} target="_blank" rel="noopener noreferrer">fale com a gente</a>.</p>}
+        {days && daysInMonth <= 4 && month < maxMonth && (
+          <button onClick={() => setMonth((m) => addMonths(m, 1))} className="btn-line mt-4 w-full">Ver {format(addMonths(month, 1), 'MMMM', { locale: ptBR })} →</button>
+        )}
         {err && <p role="alert" className="mt-6 text-sm text-erro">{err}</p>}
       </div>
 
       <div className="lg:col-span-5 lg:col-start-8">
         <h2 id="horarios" className="scroll-mt-24 text-[clamp(2rem,4vw,3rem)] leading-none">E o <em className="text-cacau">horário.</em></h2>
-        {!date ? <p className="mt-6 text-espresso/50">Selecione um dia no calendário.</p>
-          : slots === null ? <p className="mt-6 animate-pulse text-espresso/50">Buscando horários…</p>
-          : slots.length === 0 ? <p className="mt-6 text-espresso/60">Esse dia acabou de lotar. Escolha outro.</p>
+        {!date ? <p className="mt-6 text-espresso/70">Toque em um dia no calendário.</p>
+          : slots === null ? <p className="mt-6 animate-pulse text-espresso/70">Buscando horários…</p>
+          : slots.length === 0 ? <p className="mt-6 text-espresso/75">Esse dia acabou de lotar. Escolha outro.</p>
           : (
             <div className="mt-6 space-y-8">
-              <p className="text-sm text-espresso/60">{longDate(date)}</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[1rem] font-medium">{longDate(date)}</p>
+                <button onClick={() => document.querySelector('[aria-label="Mês anterior"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="min-h-11 shrink-0 text-[0.95rem] underline">Trocar dia</button>
+              </div>
               {Object.entries(groups).filter(([, v]) => v.length).map(([g, v]) => (
                 <div key={g}>
                   <p className="label">{g}</p>
@@ -285,7 +297,7 @@ function Summary({ service, length, slot }: { service: Service; length: HairLeng
         ...(length ? [['Comprimento', lengthLabel(length)]] : []),
         ['Data', <span>{longDate(date)}</span>],
         ['Horário', `${timeSP(slot)} · duração aprox. ${durationLabel(dur)}`],
-        ['Valor', price != null ? <span className="font-display text-2xl">{money(price)}</span> : <span className="text-espresso/60">Confirmado no salão</span>],
+        ['Valor', price != null ? <span className="font-display text-2xl">{money(price)}</span> : <span className="text-espresso/75">Valor combinado no salão</span>],
       ].map(([k, v], i) => (
         <div key={i} className="flex items-baseline justify-between gap-6 py-4"><dt className="label !mb-0">{k}</dt><dd className="text-right">{v}</dd></div>
       ))}
@@ -345,22 +357,22 @@ function GuestForm({ draft, service, onNote, onDone, onTaken }:
             <input id="g-name" className="field-box !py-3 !text-[1.05rem]" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></div>
           <div><label className="label" htmlFor="g-phone">Celular (WhatsApp)</label>
             <input id="g-phone" className="field-box !py-3 !text-[1.05rem]" inputMode="tel" autoComplete="tel" placeholder="(11) 91234-5678" value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} /></div>
-          <div><label className="label" htmlFor="g-birth">Data de nascimento</label>
-            <input id="g-birth" className="field-box !py-3 !text-[1.05rem]" inputMode="numeric" placeholder="dia/mês/ano" value={birth} onChange={(e) => setBirth(maskBirth(e.target.value))} />
-            <p className="mt-1 text-[0.8rem] text-espresso/55">Serve para você ver seus horários depois, em qualquer celular.</p></div>
+          <div><label className="label" htmlFor="g-birth">Data de nascimento (dia/mês/ano)</label>
+            <input id="g-birth" className="field-box !py-3 !text-[1.05rem]" inputMode="numeric" autoComplete="bday" placeholder="dia/mês/ano" value={birth} onChange={(e) => setBirth(maskBirth(e.target.value))} />
+            <p className="mt-1 text-[0.85rem] text-espresso/75">Serve para você ver seus horários depois, em qualquer celular.</p></div>
         </>
       )}
       <div><label className="label" htmlFor="note">Recado para a Laís (se quiser)</label>
         <textarea id="note" rows={2} maxLength={500} className="field-box !text-[1rem]" placeholder="Ex.: tenho alergia a…" value={draft.note ?? ''} onChange={(e) => onNote(e.target.value)} /></div>
       {!guest && (
-        <label className="flex cursor-pointer gap-3 text-[0.95rem] leading-relaxed text-espresso/80">
+        <label className="flex cursor-pointer gap-3 py-2 text-[0.95rem] leading-relaxed text-espresso/80">
           <input type="checkbox" className="mt-1 h-6 w-6 shrink-0 accent-[#2b1f19]" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
           <span>Autorizo o studio a guardar meus dados para os atendimentos (<Link to="/privacidade" target="_blank" className="underline">privacidade</Link>).</span>
         </label>
       )}
       {err && <p role="alert" className="bg-erro/10 p-3 text-[0.95rem] text-erro">{err}</p>}
-      <button disabled={busy} className="btn-dark w-full text-[0.95rem]">{busy ? 'Enviando…' : <><Check /> Confirmar agendamento</>}</button>
-      <p className="text-center text-[0.85rem] text-espresso/55">A Laís confirma seu horário pelo WhatsApp.</p>
+      <button disabled={busy} className="btn-dark w-full whitespace-nowrap text-[0.9rem] !tracking-[0.08em]">{busy ? 'Enviando…' : <><Check /> Confirmar agendamento</>}</button>
+      <p className="text-center text-[0.9rem] text-espresso/75">A Laís confirma seu horário pelo WhatsApp.</p>
     </form>
   )
 }

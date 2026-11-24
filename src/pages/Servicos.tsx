@@ -8,8 +8,8 @@ import { contactLink } from '../lib/whatsapp'
 import type { Service, ServicePrice } from '../lib/types'
 
 function PriceCell({ p }: { p: ServicePrice | undefined }) {
-  if (!p || p.unavailable) return <span className="text-sm italic text-cacau">A combinar</span>
-  if (p.price == null) return <span className="text-sm italic text-cacau">A combinar</span>
+  if (!p || p.unavailable) return <span className="text-sm italic text-cacau">Só pelo WhatsApp</span>
+  if (p.price == null) return <span className="text-sm italic text-cacau">Valor combinado no salão</span>
   const promo = promoActive(p)
   return (
     <span className="whitespace-nowrap">

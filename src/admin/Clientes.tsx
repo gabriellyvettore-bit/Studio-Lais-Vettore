@@ -190,8 +190,8 @@ export function ClienteDetalhe() {
                         <p className="text-sm text-espresso/55">{[lengthLabel(h.hair_length), money(h.price)].filter(Boolean).join(' · ')}</p>
                       </div>
                       <div className="flex gap-1">
-                        <button onClick={() => setHistForm(h)} className="p-2 hover:bg-linho" aria-label="Editar"><Edit /></button>
-                        <button onClick={() => delHist(h)} className="p-2 text-erro hover:bg-linho" aria-label="Excluir"><Trash /></button>
+                        <button onClick={() => setHistForm(h)} className="flex h-11 w-11 items-center justify-center hover:bg-linho" aria-label="Editar"><Edit /></button>
+                        <button onClick={() => delHist(h)} className="flex h-11 w-11 items-center justify-center text-erro hover:bg-linho" aria-label="Excluir"><Trash /></button>
                       </div>
                     </div>
                     <dl className="mt-3 grid gap-2 text-sm">
@@ -214,7 +214,7 @@ export function ClienteDetalhe() {
                 {appts.map((a) => (
                   <li key={a.id}><button onClick={() => setApptForm(a)} className="flex w-full flex-wrap items-center justify-between gap-2 py-3 text-left hover:bg-linho/50">
                     <span><span className="font-display text-xl">{a.service_name}</span> <span className="text-sm text-espresso/55">· {shortDate(dateSP(a.starts_at))} {timeSP(a.starts_at)}</span></span>
-                    <span className={`chip !text-[0.6rem] ${STATUS_STYLE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
+                    <span className={`chip !text-[0.7rem] ${STATUS_STYLE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
                   </button></li>
                 ))}
               </ul>

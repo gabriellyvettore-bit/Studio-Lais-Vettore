@@ -16,7 +16,7 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
         className={`max-h-[92dvh] w-full overflow-y-auto bg-marfim shadow-2xl [animation:fade_.3s_ease] ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}>
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-espresso/10 bg-marfim px-6 py-4">
           <h2 className="text-2xl">{title}</h2>
-          <button onClick={onClose} aria-label="Fechar" className="-mr-2 p-2"><Close /></button>
+          <button onClick={onClose} aria-label="Fechar" className="-mr-3 flex h-11 w-11 items-center justify-center"><Close width={22} height={22} /></button>
         </div>
         <div className="p-6">{children}</div>
       </div>

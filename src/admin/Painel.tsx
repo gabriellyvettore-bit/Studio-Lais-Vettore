@@ -101,7 +101,7 @@ export default function Painel() {
               <li key={a.id}><button onClick={() => setEditing(a)} className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left">
                 <span className="w-14 shrink-0 font-display text-2xl">{timeSP(a.starts_at)}</span>
                 <span className="min-w-0 flex-1"><span className="block truncate">{a.clients?.full_name}</span><span className="block truncate text-[0.9rem] text-espresso/60">{a.service_name}</span></span>
-                <span className={`chip shrink-0 !text-[0.6rem] ${STATUS_STYLE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
+                <span className={`chip shrink-0 !text-[0.7rem] ${STATUS_STYLE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
               </button></li>
             ))}
           </ul>

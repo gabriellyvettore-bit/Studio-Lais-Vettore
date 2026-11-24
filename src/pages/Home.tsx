@@ -18,10 +18,10 @@ export default function Home() {
       <section className="relative overflow-hidden bg-espresso text-marfim">
         <div className="absolute inset-0 lg:left-[40%]">
           <Img src={hero} alt="Cabelo feito no Studio Lais Vettore" loading="eager" fetchPriority="high" className="object-[50%_15%]" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--color-espresso)_0%,var(--color-espresso)_35%,rgba(43,31,25,.5)_65%,rgba(43,31,25,.35)_100%)] lg:bg-gradient-to-r lg:from-espresso lg:via-espresso/20 lg:to-transparent" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--color-espresso)_0%,var(--color-espresso)_35%,rgba(43,31,25,.65)_65%,rgba(43,31,25,.55)_100%)] lg:bg-gradient-to-r lg:from-espresso lg:via-espresso/20 lg:to-transparent" />
         </div>
         <div className="relative mx-auto flex min-h-[78svh] max-w-[1320px] flex-col justify-end px-5 pb-10 pt-28 sm:px-8 lg:min-h-[640px] lg:justify-center lg:pb-16">
-          <p className="kicker !text-bronze-claro">{h.hero_kicker}</p>
+          <p className="kicker !text-marfim/90">{h.hero_kicker}</p>
           <h1 className="mt-4 max-w-[12ch] text-[clamp(3rem,9vw,7rem)] leading-[0.9]">
             {h.hero_title.split(' ').map((w, i, a) => i === a.length - 1 ? <em key={i} className="text-areia">{w}</em> : <span key={i}>{w} </span>)}
           </h1>

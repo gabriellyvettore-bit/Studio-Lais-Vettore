@@ -75,9 +75,9 @@ function BottomBar() {
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-espresso/10 bg-marfim/97 px-3 pb-[calc(0.6rem+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur lg:hidden">
-        <Link to="/agendar" className="btn-dark flex-1 whitespace-nowrap !px-3 text-[0.85rem] !tracking-[0.08em]"><Calendar width={20} height={20} /> Agendar horário</Link>
+        <Link to="/agendar" className="btn-dark flex-1 whitespace-nowrap !px-3 text-[0.85rem] !tracking-[0.08em]"><Calendar width={20} height={20} /> Agendar</Link>
         <a href={contactLink(settings.contact)} target="_blank" rel="noopener noreferrer" className="btn border border-espresso/25 !px-4 text-[0.85rem] !tracking-[0.08em]" aria-label="Falar no WhatsApp">
-          <Whats width={22} height={22} /> <span className="hidden min-[400px]:inline">WhatsApp</span>
+          <Whats width={22} height={22} /> <span>WhatsApp</span>
         </a>
       </div>
       <a href={contactLink(settings.contact)} target="_blank" rel="noopener noreferrer"
